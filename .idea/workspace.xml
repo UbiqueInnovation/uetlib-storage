@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="75b7ddeb-be2e-4cb2-bb7a-bd753cf44a78" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.github/workflows/build.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.github/workflows/build_on_tag_and_deploy_artifactory.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/sonarlint.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/uiDesigner.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/CHANGELOG.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/OutputMetaData.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/OutputMetaDataProvider.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/OutputVersion.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/StorageClient.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/annotations/CodeGenerationType.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/annotations/DeleteMapping.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/annotations/ExistsMapping.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/annotations/InputMapping.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/annotations/ListMapping.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/annotations/OutputMapping.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/annotations/StorageMapping.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/annotations/StorageObject.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/annotations/StoragePathVariable.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/builder/StorageBuilder.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/builder/StorageBuilderUtil.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/builder/StorageMethodInfo.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/clients/AmazonS3StorageClient.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/clients/AzureBlobStorageClient.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/clients/CloudflareR2StorageClient.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/clients/FileSystemStorageClient.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/clients/MinioStorageClient.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/clients/RetryStorageClient.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/exception/StorageClientException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/images/ImageStorageService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/images/ImageVariant.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/invocation/DeleteMappingInvocationHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/invocation/ExistsMappingInvocationHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/invocation/InputMappingInvocationHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/invocation/InvocationHandlerUtil.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/invocation/ListMappingInvocationHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/invocation/OutputMappingInvocationHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/invocation/StorageInvocationHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/invocation/StorageMappingInvocationHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/invocation/StorageMappingInvocationProperties.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/logger/LogAtNullableLevel.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/logger/NullLoggingEventBuilder.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/output/ByteOutput.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/output/FileOutput.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/output/GZipOutput.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/output/InputStreamOutput.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/output/JsonOutput.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/output/Output.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/output/OutputWithPath.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/ch/ubique/backend/storage/OutputMetaDataTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/ch/ubique/backend/storage/annotations/EnableStoragesImplementationTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/ch/ubique/backend/storage/annotations/TestDeleteStorage.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/ch/ubique/backend/storage/annotations/TestExistsStorage.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/ch/ubique/backend/storage/annotations/TestInputStorage.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/ch/ubique/backend/storage/annotations/TestListStorage.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/ch/ubique/backend/storage/annotations/TestOutputStorage.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/ch/ubique/backend/storage/annotations/TestStorage.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/ch/ubique/backend/storage/annotations/TestStorageReferenceImplementation.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/ch/ubique/backend/storage/annotations/TestUser.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/ch/ubique/backend/storage/clients/StorageClientTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/ch/ubique/backend/storage/sas/ImageStorageServiceTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/resources/data/png.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/resources/data/ubique_main_image.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/resources/storage/files/2.png" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+        <option value="AnnotationType" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="JpbToolWindowState">
+    <option name="isToolWindowVisible" value="false" />
+  </component>
+  <component name="KtfmtSettingsMigration">
+    <option name="stateVersion" value="2" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 8
+}</component>
+  <component name="ProjectId" id="2oqAFSErCPVvADhqkOXbuWekYhk" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+    <option name="sortKey" value="BY_TIME_DESCENDING" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "JUnit.All in uetlib-storage.executor": "Run",
+    "JUnit.OutputMetaDataTest.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "/Users/sk/Ubique/Git/uetlib/uetlib-storage",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.21724138",
+    "settings.editor.selected.configurable": "com.facebook.ktfmt_idea_plugin.settings",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="ReactorSettings">
+    <option name="notificationShown" value="true" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+    </key>
+    <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="ch.ubique.backend.storage.annotations" />
+    </key>
+  </component>
+  <component name="RunManager" selected="JUnit.All in uetlib-storage">
+    <configuration name="All in uetlib-storage" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="uetlib-storage" />
+      <option name="PACKAGE_NAME" value="" />
+      <option name="TEST_OBJECT" value="package" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="OutputMetaDataTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="uetlib-storage" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="ch.ubique.backend.storage.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="ch.ubique.backend.storage" />
+      <option name="MAIN_CLASS_NAME" value="ch.ubique.backend.storage.OutputMetaDataTest" />
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="uetlib-storage" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <module name="uetlib-storage" />
+      <option name="filePath" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="PythonConfigurationType" factoryName="Python">
+      <module name="uetlib-storage" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="Python.FlaskServer">
+      <module name="uetlib-storage" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="launchJavascriptDebuger" value="false" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="Tox" factoryName="Tox">
+      <module name="uetlib-storage" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="JUnit.All in uetlib-storage" />
+        <item itemvalue="JUnit.OutputMetaDataTest" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-28b599e66164-intellij.indexing.shared.core-IU-242.23726.103" />
+        <option value="bundled-js-predefined-d6986cc7102b-5c90d61e3bab-JavaScript-IU-242.23726.103" />
+        <option value="project-project-7b5e3fd8ced8-04f4c370" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="75b7ddeb-be2e-4cb2-bb7a-bd753cf44a78" name="Changes" comment="" />
+      <created>1726831122970</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1726831122970</updated>
+      <workItem from="1731586629734" duration="14457000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/builder/StorageBuilder.java</url>
+          <line>64</line>
+          <option name="timeStamp" value="5" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/builder/StorageBuilderUtil.java</url>
+          <line>22</line>
+          <option name="timeStamp" value="6" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/main/java/ch/ubique/backend/storage/builder/StorageBuilderUtil.java</url>
+          <line>101</line>
+          <properties>
+            <option name="lambda-ordinal" value="0" />
+          </properties>
+          <option name="timeStamp" value="8" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>

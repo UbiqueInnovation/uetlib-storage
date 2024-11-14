@@ -1,0 +1,219 @@
+package ch.ubique.backend.storage.annotations;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+
+import static java.util.Objects.requireNonNull;
+
+import ch.ubique.backend.storage.OutputMetaData;
+import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.storage.builder.StorageBuilder;
+import ch.ubique.backend.storage.clients.FileSystemStorageClient;
+import ch.ubique.backend.storage.output.ByteOutput;
+import ch.ubique.backend.storage.output.GZipOutput;
+import ch.ubique.backend.storage.output.JsonOutput;
+
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.*;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Set;
+
+class EnableStoragesImplementationTest {
+
+    private final ObjectMapper objectMapper;
+    private final StorageClient storageClient;
+    private final TestStorage testStorage;
+
+    private final TestStorageReferenceImplementation referenceImplementation;
+
+    private final byte[] png2;
+
+    EnableStoragesImplementationTest() throws IOException {
+        objectMapper =
+                JsonMapper.builder()
+                        .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+                        .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
+                        .build();
+        storageClient = spy(new FileSystemStorageClient(Files.createTempDirectory(null).toString()));
+        testStorage =
+                StorageBuilder.builder(TestStorage.class)
+                        .storageClient(storageClient)
+                        .classLoader(this.getClass().getClassLoader())
+                        .objectMapper(objectMapper)
+                        .basePath("storage")
+                        .build();
+        referenceImplementation =
+                new TestStorageReferenceImplementation(storageClient, objectMapper);
+        png2 =
+                requireNonNull(
+                                getClass()
+                                        .getClassLoader()
+                                        .getResourceAsStream("storage/files/2.png"))
+                        .readAllBytes();
+    }
+
+    @BeforeEach
+    void beforeEach() throws IOException {
+        MockitoAnnotations.openMocks(this);
+        storageClient.delete("", true);
+        storageClient.write(
+                new JsonOutput<>(new TestUser(17, "Professor", "Jaffe Presley")),
+                "storage/files/17.json");
+        storageClient.write(new ByteOutput(png2), "storage/files/2.png");
+        storageClient.write(new ByteOutput(png2), "storage/files/61.png");
+        storageClient.write(new ByteOutput(png2), "storage/files/5/54.png");
+        storageClient.write(new ByteOutput(png2), "storage/files/5/42.png");
+    }
+
+    @Test
+    void testInputStorage() throws IOException {
+        assertNotNull(testStorage);
+        assertNotNull(referenceImplementation);
+
+        final var testUser = testStorage.getJson(17);
+        assertEquals(new TestUser(17, "Professor", "Jaffe Presley"), testUser);
+        verify(storageClient).read("storage/files/17.json", true);
+
+        final var imageCompressed = testStorage.getImageCompressed(2);
+        assertArrayEquals(png2, imageCompressed);
+        verify(storageClient).read("storage/files/2.png", false);
+
+        final var image = testStorage.getImage(2);
+        assertArrayEquals(png2, image);
+        verify(storageClient).read("storage/files/2.png", true);
+    }
+
+    @Test
+    void testOutputStorage() throws IOException {
+        assertNotNull(testStorage);
+        assertNotNull(referenceImplementation);
+
+        final var testUser = new TestUser(32, "Student", "Seong-Hyeon Lebogang");
+        testStorage.saveJson(testUser, "32", null);
+        verify(storageClient)
+                .write(
+                        new GZipOutput(new JsonOutput<>(testUser, objectMapper)),
+                        "storage/files/32.json",
+                        null);
+        assertEquals(
+                testUser,
+                objectMapper.readValue(
+                        storageClient.read("storage/files/32.json", true), TestUser.class));
+
+        final var outputMetaData =
+                new OutputMetaData(Duration.ofSeconds(48654), Duration.ofMillis(87623))
+                        .backoff(Duration.ofHours(2))
+                        .nextRefresh(Instant.now().plusMillis(629235637873L));
+        testStorage.saveJson(testUser, "32", outputMetaData);
+        verify(storageClient)
+                .write(
+                        new GZipOutput(new JsonOutput<>(testUser, objectMapper)),
+                        "storage/files/32.json",
+                        outputMetaData);
+        assertEquals(
+                testUser,
+                objectMapper.readValue(
+                        storageClient.read("storage/files/32.json", true), TestUser.class));
+
+        testStorage.saveImage(png2, "8");
+        verify(storageClient)
+                .write(
+                        new GZipOutput(new ByteOutput(png2, "image/png")),
+                        "storage/files/8.png",
+                        null);
+    }
+
+    @Test
+    void testDeleteStorage() throws IOException {
+        final var deleted62 = testStorage.deleteFile("62");
+        verify(storageClient).delete("storage/files/62.png", false);
+        assertFalse(deleted62);
+        assertEquals(
+                Set.of(
+                        "storage/files/2.png",
+                        "storage/files/5/",
+                        "storage/files/17.json",
+                        "storage/files/61.png"),
+                storageClient.list("storage/files/"));
+
+        final var deleted61 = testStorage.deleteFile("61");
+        verify(storageClient).delete("storage/files/61.png", false);
+        assertTrue(deleted61);
+        assertFalse(
+                storageClient
+                        .list("storage/files/")
+                        .containsAll(
+                                Set.of(
+                                        "storage/files/2.png",
+                                        "storage/files/17.json",
+                                        "storage/files/61.png")));
+        assertEquals(
+                Set.of("storage/files/2.png", "storage/files/5/", "storage/files/17.json"),
+                storageClient.list("storage/files/"));
+
+        assertEquals(
+                storageClient.list("storage/files/5/"),
+                Set.of("storage/files/5/54.png", "storage/files/5/42.png"));
+        final var deletedFolder4 = testStorage.deleteFolder(4);
+        verify(storageClient).delete("storage/files/4", true);
+        assertFalse(deletedFolder4);
+        assertEquals(
+                Set.of("storage/files/5/54.png", "storage/files/5/42.png"),
+                storageClient.list("storage/files/5/"));
+
+        final var deletedFolder5 = testStorage.deleteFolder(5);
+        verify(storageClient).delete("storage/files/5", true);
+        assertTrue(deletedFolder5);
+        assertThrows(NoSuchFileException.class, () -> storageClient.list("storage/files/5/"));
+        assertFalse(storageClient.list("storage/files/").contains("storage/files/5/"));
+    }
+
+    @Test
+    void testListStorage() throws IOException {
+        assertEquals(
+                Set.of(
+                        "storage/files/2.png",
+                        "storage/files/5/",
+                        "storage/files/17.json",
+                        "storage/files/61.png"),
+                testStorage.listFiles("files"));
+        verify(storageClient).list("storage/files/", false);
+
+        assertEquals(
+                Set.of(
+                        "storage/files/2.png",
+                        "storage/files/5/54.png",
+                        "storage/files/5/42.png",
+                        "storage/files/17.json",
+                        "storage/files/61.png"),
+                testStorage.listFilesRecursive());
+        verify(storageClient).list("storage/files/", true);
+    }
+
+    @Test
+    void testExistsStorage() throws IOException {
+        assertTrue(testStorage.existsFile("files/2.png"));
+        verify(storageClient).exists("storage/files/2.png");
+
+        assertFalse(testStorage.existsFile("files/5.png"));
+        verify(storageClient).exists("storage/files/5.png");
+
+        assertTrue(testStorage.existsFolder(5));
+        verify(storageClient).exists("storage/files/5");
+
+        assertFalse(testStorage.existsFolder(2));
+        verify(storageClient).exists("storage/files/2");
+    }
+}
