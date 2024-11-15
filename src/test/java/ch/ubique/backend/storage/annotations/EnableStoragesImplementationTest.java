@@ -46,11 +46,12 @@ class EnableStoragesImplementationTest {
                         .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
                         .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
                         .build();
-        storageClient = spy(new FileSystemStorageClient(Files.createTempDirectory(null).toString()));
+        storageClient =
+                spy(new FileSystemStorageClient(Files.createTempDirectory(null).toString()));
         testStorage =
                 StorageBuilder.builder(TestStorage.class)
                         .storageClient(storageClient)
-                        .classLoader(this.getClass().getClassLoader())
+                        .classLoader(getClass().getClassLoader())
                         .objectMapper(objectMapper)
                         .basePath("storage")
                         .build();
@@ -204,10 +205,10 @@ class EnableStoragesImplementationTest {
 
     @Test
     void testExistsStorage() throws IOException {
-        assertTrue(testStorage.existsFile("files/2.png"));
+        assertTrue(testStorage.existsFile("2"));
         verify(storageClient).exists("storage/files/2.png");
 
-        assertFalse(testStorage.existsFile("files/5.png"));
+        assertFalse(testStorage.existsFile("5"));
         verify(storageClient).exists("storage/files/5.png");
 
         assertTrue(testStorage.existsFolder(5));
