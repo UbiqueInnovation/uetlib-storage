@@ -1,5 +1,7 @@
 package ch.ubique.backend.storage.annotations;
 
+import static ch.ubique.backend.test.assertion.AssertionUtils.assertThrowsWithMessage;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -19,6 +21,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
+import io.swagger.v3.oas.annotations.Parameter;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
@@ -30,7 +34,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
 
-class EnableStoragesImplementationTest {
+@SuppressWarnings("unused")
+class StorageImplementationTest {
 
     private final ObjectMapper objectMapper;
     private final StorageClient storageClient;
@@ -40,7 +45,7 @@ class EnableStoragesImplementationTest {
 
     private final byte[] png2;
 
-    EnableStoragesImplementationTest() throws IOException {
+    StorageImplementationTest() throws IOException {
         objectMapper =
                 JsonMapper.builder()
                         .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
@@ -216,5 +221,154 @@ class EnableStoragesImplementationTest {
 
         assertFalse(testStorage.existsFolder(2));
         verify(storageClient).exists("storage/files/2");
+    }
+
+    @Test
+    void testInvalidStorage() {
+        assertThrowsWithMessage(
+                IllegalArgumentException.class,
+                () ->
+                        StorageBuilder.builder(NonStorageMappingMethodStorage.class)
+                                .storageClient(storageClient)
+                                .classLoader(getClass().getClassLoader())
+                                .objectMapper(objectMapper)
+                                .basePath("storage")
+                                .build(),
+                "Storage interface NonStorageMappingMethodStorage is not valid: Method 'NonStorageMappingMethodStorage::mappingMethod' is not annotated by one of [interface ch.ubique.backend.storage.annotations.OutputMapping, interface ch.ubique.backend.storage.annotations.InputMapping, interface ch.ubique.backend.storage.annotations.DeleteMapping, interface ch.ubique.backend.storage.annotations.ListMapping, interface ch.ubique.backend.storage.annotations.ExistsMapping]");
+
+        assertThrowsWithMessage(
+                IllegalArgumentException.class,
+                () ->
+                        StorageBuilder.builder(NonVoidOutputMappingMethodStorage.class)
+                                .storageClient(storageClient)
+                                .classLoader(getClass().getClassLoader())
+                                .objectMapper(objectMapper)
+                                .basePath("storage")
+                                .build(),
+                "Storage OutputMapping method NonVoidOutputMappingMethodStorage::mappingMethod is not valid: @OutputMapping mapping method must return void");
+
+        assertThrowsWithMessage(
+                IllegalArgumentException.class,
+                () ->
+                        StorageBuilder.builder(VoidInputMappingMethodStorage.class)
+                                .storageClient(storageClient)
+                                .classLoader(getClass().getClassLoader())
+                                .objectMapper(objectMapper)
+                                .basePath("storage")
+                                .build(),
+                "Storage InputMapping method VoidInputMappingMethodStorage::mappingMethod is not valid: @InputMapping mapping method must not return void");
+
+        assertThrowsWithMessage(
+                IllegalArgumentException.class,
+                () ->
+                        StorageBuilder.builder(OutputMappingMethodNoStorageObject.class)
+                                .storageClient(storageClient)
+                                .classLoader(getClass().getClassLoader())
+                                .objectMapper(objectMapper)
+                                .basePath("storage")
+                                .build(),
+                "Storage OutputMapping method OutputMappingMethodNoStorageObject::mappingMethod is not valid: There must be exactly one parameter annotated with @StorageObject, found 0");
+
+        assertThrowsWithMessage(
+                IllegalArgumentException.class,
+                () ->
+                        StorageBuilder.builder(OutputMappingMethodTooManyStorageObject.class)
+                                .storageClient(storageClient)
+                                .classLoader(getClass().getClassLoader())
+                                .objectMapper(objectMapper)
+                                .basePath("storage")
+                                .build(),
+                "Storage OutputMapping method OutputMappingMethodTooManyStorageObject::mappingMethod is not valid: There must be exactly one parameter annotated with @StorageObject, found 2");
+
+        assertThrowsWithMessage(
+                IllegalArgumentException.class,
+                () ->
+                        StorageBuilder.builder(OutputMappingMethodIllegalParameterTypeObject.class)
+                                .storageClient(storageClient)
+                                .classLoader(getClass().getClassLoader())
+                                .objectMapper(objectMapper)
+                                .basePath("storage")
+                                .build(),
+                "Storage method OutputMappingMethodIllegalParameterTypeObject::mappingMethod is not valid: Method parameter 'parameter' must either be one of type '[OutputMetaData, ObjectMapper]' or be annotated with one of [StorageObject, StoragePathVariable]");
+
+        assertThrowsWithMessage(
+                IllegalArgumentException.class,
+                () ->
+                        StorageBuilder.builder(
+                                        OutputMappingMethodIllegalParameterAnnotationTypeObject
+                                                .class)
+                                .storageClient(storageClient)
+                                .classLoader(getClass().getClassLoader())
+                                .objectMapper(objectMapper)
+                                .basePath("storage")
+                                .build(),
+                "Storage method OutputMappingMethodIllegalParameterAnnotationTypeObject::mappingMethod is not valid: Method parameter 'parameter' must either be one of type '[OutputMetaData, ObjectMapper]' or be annotated with one of [StorageObject, StoragePathVariable]");
+
+        assertThrowsWithMessage(
+                IllegalArgumentException.class,
+                () ->
+                        StorageBuilder.builder(OutputMappingTooManyObjectMapper.class)
+                                .storageClient(storageClient)
+                                .classLoader(getClass().getClassLoader())
+                                .objectMapper(objectMapper)
+                                .basePath("storage")
+                                .build(),
+                "Storage method OutputMappingTooManyObjectMapper::mappingMethod is not valid: There must be at most one parameter of type @class com.fasterxml.jackson.databind.ObjectMapper, found 2");
+
+        assertThrowsWithMessage(
+                IllegalArgumentException.class,
+                () ->
+                        StorageBuilder.builder(OutputMappingTooManyOutputMetaData.class)
+                                .storageClient(storageClient)
+                                .classLoader(getClass().getClassLoader())
+                                .objectMapper(objectMapper)
+                                .basePath("storage")
+                                .build(),
+                "Storage method OutputMappingTooManyOutputMetaData::mappingMethod is not valid: There must be at most one parameter of type @class ch.ubique.backend.storage.OutputMetaData, found 2");
+    }
+
+    interface NonStorageMappingMethodStorage {
+        void mappingMethod();
+    }
+
+    interface NonVoidOutputMappingMethodStorage {
+        @OutputMapping
+        String mappingMethod(@StorageObject String storageObject);
+    }
+
+    interface VoidInputMappingMethodStorage {
+        @InputMapping
+        void mappingMethod();
+    }
+
+    interface OutputMappingMethodNoStorageObject {
+        @OutputMapping
+        String mappingMethod();
+    }
+
+    interface OutputMappingMethodTooManyStorageObject {
+        @OutputMapping
+        String mappingMethod(
+                @StorageObject String storageObject1, @StorageObject String storageObject2);
+    }
+
+    interface OutputMappingMethodIllegalParameterTypeObject {
+        @OutputMapping
+        String mappingMethod(String parameter);
+    }
+
+    interface OutputMappingMethodIllegalParameterAnnotationTypeObject {
+        @OutputMapping
+        String mappingMethod(@Parameter OutputMetaData parameter);
+    }
+
+    interface OutputMappingTooManyObjectMapper {
+        @OutputMapping
+        String mappingMethod(ObjectMapper objectMapper1, ObjectMapper objectMapper2);
+    }
+
+    interface OutputMappingTooManyOutputMetaData {
+        @OutputMapping
+        String mappingMethod(OutputMetaData outputMetaData1, OutputMetaData outputMetaData2);
     }
 }
