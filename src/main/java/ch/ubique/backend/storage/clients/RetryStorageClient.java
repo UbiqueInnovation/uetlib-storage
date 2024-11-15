@@ -7,47 +7,47 @@ import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 
-import io.github.resilience4j.retry.Retry;
-import io.github.resilience4j.retry.RetryConfig;
+import com.pivovarit.function.ThrowingRunnable;
 
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
+import org.springframework.retry.RetryCallback;
+import org.springframework.retry.support.RetryTemplate;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Collection;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class RetryStorageClient implements StorageClient {
 
-    private static final Retry DEFAULT_RETRY =
-            Retry.of(
-                    "storage-retry",
-                    RetryConfig.custom()
-                            .retryExceptions(Exception.class)
-                            .maxAttempts(10)
-                            .intervalFunction(
-                                    attempt -> ThreadLocalRandom.current().nextLong(1, 500))
-                            .build());
+    private static final RetryTemplate DEFAULT_RETRY_TEMPLATE =
+            RetryTemplate.builder()
+                    .retryOn(Exception.class)
+                    .maxAttempts(10)
+                    .uniformRandomBackoff(Duration.ofMillis(1), Duration.ofMillis(500))
+                    .build();
 
     private final StorageClient storageClient;
-    private final Retry retry;
+    private final RetryTemplate retryTemplate;
 
     public RetryStorageClient(final StorageClient storageClient) {
         this(storageClient, null);
     }
 
     public RetryStorageClient(
-            @NotNull final StorageClient storageClient, @Nullable final Retry retry) {
+            @NotNull final StorageClient storageClient,
+            @Nullable final RetryTemplate retryTemplate) {
         this.storageClient = requireNonNull(storageClient, "Storage client must not be null.");
-        this.retry = requireNonNullElse(retry, DEFAULT_RETRY);
+        this.retryTemplate = requireNonNullElse(retryTemplate, DEFAULT_RETRY_TEMPLATE);
     }
 
     @Override
-    public StorageClient retryable(final Retry retry) {
+    public StorageClient retryable(final RetryTemplate retryTemplate) {
         // Unwrap and wrap again with new retry template
-        return withoutRetry().retryable(retry);
+        return withoutRetry().retryable(retryTemplate);
     }
 
     @Override
@@ -66,10 +66,7 @@ public class RetryStorageClient implements StorageClient {
             return;
         }
 
-        final var write =
-                Retry.decorateCheckedRunnable(
-                        retry, () -> storageClient.write(output, path, outputMetaData));
-        write.unchecked().run();
+        retryRunnable(() -> storageClient.write(output, path, outputMetaData));
     }
 
     @Override
@@ -81,54 +78,48 @@ public class RetryStorageClient implements StorageClient {
             return;
         }
 
-        final var write =
-                Retry.decorateCheckedRunnable(
-                        retry, () -> storageClient.write(outputs, outputMetaData));
-        write.unchecked().run();
+        retryRunnable(() -> storageClient.write(outputs, outputMetaData));
     }
 
     @Override
     public InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
             throws IOException {
-        final var read =
-                Retry.decorateCheckedSupplier(
-                        retry, () -> storageClient.read(path, doUncompressIfNeeded));
-        return read.unchecked().get();
+        return retryTemplate.execute(context -> storageClient.read(path, doUncompressIfNeeded));
     }
 
     @Override
     public boolean delete(final @NotNull String path, final boolean recursive) throws IOException {
-        final var delete =
-                Retry.decorateCheckedSupplier(retry, () -> storageClient.delete(path, recursive));
-        return delete.unchecked().get();
+        return retryTemplate.execute(context -> storageClient.delete(path, recursive));
     }
 
     @Override
     public Collection<String> list(final @NotNull String path, final boolean recursive)
             throws IOException {
-        final var list =
-                Retry.decorateCheckedSupplier(retry, () -> storageClient.list(path, recursive));
-        return list.unchecked().get();
+        return retryTemplate.execute(context -> storageClient.list(path, recursive));
     }
 
     @Override
     public boolean exists(@NotNull final String path) throws IOException {
-        final var exists = Retry.decorateCheckedSupplier(retry, () -> storageClient.exists(path));
-        return exists.unchecked().get();
+        return retryTemplate.execute(context -> storageClient.exists(path));
     }
 
     @Override
     public String getSignedUrl(final @NotNull String path, final @NotNull OffsetDateTime expiry)
             throws IOException {
-        final var getSignedUrl =
-                Retry.decorateCheckedSupplier(
-                        retry, () -> storageClient.getSignedUrl(path, expiry));
-        return getSignedUrl.unchecked().get();
+        return retryTemplate.execute(context -> storageClient.getSignedUrl(path, expiry));
     }
 
     @Override
     public String getUrl(final @NotNull String path) {
-        final var getUrl = Retry.decorateCheckedSupplier(retry, () -> storageClient.getUrl(path));
-        return getUrl.unchecked().get();
+        return retryTemplate.execute(context -> storageClient.getUrl(path));
+    }
+
+    private void retryRunnable(final ThrowingRunnable<IOException> runnable) throws IOException {
+        retryTemplate.execute(
+                (RetryCallback<Void, IOException>)
+                        context -> {
+                            runnable.run();
+                            return null;
+                        });
     }
 }
