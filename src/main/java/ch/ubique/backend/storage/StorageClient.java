@@ -4,9 +4,10 @@ import ch.ubique.backend.storage.clients.RetryStorageClient;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 
-import io.github.resilience4j.retry.Retry;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
+
+import org.springframework.retry.support.RetryTemplate;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -61,8 +62,8 @@ public interface StorageClient {
         return list(path, false);
     }
 
-    default StorageClient retryable(@Nullable final Retry retry) {
-        return new RetryStorageClient(this, retry);
+    default StorageClient retryable(@Nullable final RetryTemplate retryTemplate) {
+        return new RetryStorageClient(this, retryTemplate);
     }
 
     default StorageClient retryable() {

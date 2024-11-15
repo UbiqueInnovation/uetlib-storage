@@ -6,14 +6,11 @@ import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.output.ByteOutput;
 
-import io.github.resilience4j.core.IntervalFunction;
-import io.github.resilience4j.retry.Retry;
-import io.github.resilience4j.retry.RetryConfig;
-
 import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
+import org.springframework.retry.support.RetryTemplateBuilder;
 import org.testcontainers.Testcontainers;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
@@ -108,16 +105,13 @@ class StorageClientTest {
     private void test(final StorageClient storageClient) throws IOException {
 
         if (!(storageClient instanceof RetryStorageClient)) {
-            test(
+            final var retryStorageClient =
                     storageClient.retryable(
-                            Retry.of(
-                                    "fixed-backoff",
-                                    RetryConfig.custom()
-                                            .maxAttempts(2)
-                                            .intervalFunction(
-                                                    IntervalFunction.of(
-                                                            Duration.ofMillis(1).toMillis()))
-                                            .build()))); // Also test retryable version
+                            new RetryTemplateBuilder()
+                                    .maxAttempts(2)
+                                    .fixedBackoff(Duration.ofMillis(1))
+                                    .build());
+            test(retryStorageClient); // Also test retryable version
         }
 
         assertEquals(Set.of(), storageClient.list());
