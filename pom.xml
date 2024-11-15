@@ -58,8 +58,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>testcontainers</artifactId>
+            <groupId>ch.ubique</groupId>
+            <artifactId>uetlib-testcontainers</artifactId>
+            <version>1.0.0-rc.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
