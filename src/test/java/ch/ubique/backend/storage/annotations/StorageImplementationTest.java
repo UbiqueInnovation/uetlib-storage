@@ -12,6 +12,7 @@ import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.builder.StorageBuilder;
 import ch.ubique.backend.storage.clients.FileSystemStorageClient;
+import ch.ubique.backend.storage.exception.NonRetryableStorageClientException;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.GZipOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
@@ -29,7 +30,6 @@ import org.mockito.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
@@ -182,7 +182,9 @@ class StorageImplementationTest {
         final var deletedFolder5 = testStorage.deleteFolder(5);
         verify(storageClient).delete("storage/files/5", true);
         assertTrue(deletedFolder5);
-        assertThrows(NoSuchFileException.class, () -> storageClient.list("storage/files/5/"));
+        assertThrows(
+                NonRetryableStorageClientException.class,
+                () -> storageClient.list("storage/files/5/"));
         assertFalse(storageClient.list("storage/files/").contains("storage/files/5/"));
     }
 
