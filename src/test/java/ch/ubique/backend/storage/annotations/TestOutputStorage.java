@@ -2,17 +2,18 @@ package ch.ubique.backend.storage.annotations;
 
 import ch.ubique.backend.storage.OutputMetaData;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 import org.slf4j.event.Level;
 
 import java.io.IOException;
 
 public interface TestOutputStorage {
 
-    @OutputMapping(
-            path = "files/{fileId}.png",
-            contentType = "image/png",
-            logLevel = Level.WARN)
-    void saveImage(@StorageObject byte[] data, @StoragePathVariable final String fileId)
+    @OutputMapping(path = "files/{fileId}.png", contentType = "image/png", logLevel = Level.WARN)
+    void saveImage(
+            @StorageObject @NotNull byte[] data, @StoragePathVariable @NotBlank String fileId)
             throws IOException;
 
     @OutputMapping(
@@ -22,7 +23,7 @@ public interface TestOutputStorage {
             logLevel = Level.TRACE)
     void saveJson(
             @StorageObject TestUser json,
-            @StoragePathVariable final String jsonId,
-            OutputMetaData outputMetaData)
+            @StoragePathVariable @NotBlank String jsonId,
+            @NotNull OutputMetaData outputMetaData)
             throws IOException;
 }

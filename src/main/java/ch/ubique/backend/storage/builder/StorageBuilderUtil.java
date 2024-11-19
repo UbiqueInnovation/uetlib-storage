@@ -2,6 +2,8 @@ package ch.ubique.backend.storage.builder;
 
 import static ch.ubique.backend.core.utils.AnnotationUtils.findAnnotation;
 
+import static java.util.stream.Collectors.toSet;
+
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageMappingType;
 import ch.ubique.backend.storage.annotations.*;
@@ -187,14 +189,23 @@ public final class StorageBuilderUtil {
                         validParameterAnnotationTypeNames);
             }
 
-            if (parameterAnnotations.length > 0
-                    && !validParameterAnnotationTypes.containsAll(parameterAnnotationTypes)) {
-                throwMethodParameterNotValid(
-                        storageMethod.getDeclaringClass().getSimpleName(),
-                        storageMethod.getName(),
-                        parameterName,
-                        validParameterTypeNames,
-                        validParameterAnnotationTypeNames);
+            if (parameterAnnotations.length > 0) {
+                // All jakarta annotations are also accepted
+                final var parameterAnnotationTypesExcludeJakarta =
+                        parameterAnnotationTypes.stream()
+                                .filter(
+                                        annotation ->
+                                                !annotation.getPackageName().startsWith("jakarta"))
+                                .collect(toSet());
+                if (!validParameterAnnotationTypes.containsAll(
+                        parameterAnnotationTypesExcludeJakarta)) {
+                    throwMethodParameterNotValid(
+                            storageMethod.getDeclaringClass().getSimpleName(),
+                            storageMethod.getName(),
+                            parameterName,
+                            validParameterTypeNames,
+                            validParameterAnnotationTypeNames);
+                }
             }
 
             final var outputMetaDataParametersCount =
