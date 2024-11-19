@@ -7,7 +7,7 @@
     <parent>
         <groupId>ch.ubique</groupId>
         <artifactId>uetlib-parent</artifactId>
-        <version>1.0.0-rc.1</version>
+        <version>1.0.0-rc.2</version>
     </parent>
 
     <artifactId>uetlib-storage</artifactId>
@@ -19,7 +19,7 @@
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-core</artifactId>
-            <version>1.0.0-rc.1</version>
+            <version>1.0.0-rc.2</version>
         </dependency>
 
         <!-- External storage clients -->
@@ -54,13 +54,13 @@
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-test</artifactId>
-            <version>1.0.0-rc.1</version>
+            <version>1.0.0-rc.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-testcontainers</artifactId>
-            <version>1.0.0-rc.1</version>
+            <version>1.0.0-rc.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
