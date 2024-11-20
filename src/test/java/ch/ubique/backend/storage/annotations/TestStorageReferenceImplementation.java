@@ -68,8 +68,8 @@ public final class TestStorageReferenceImplementation implements TestStorage {
     }
 
     @Override
-    public boolean deleteFolder(final int folderId) throws IOException {
-        return storageClient.delete(
+    public void deleteFolder(final int folderId) throws IOException {
+        storageClient.delete(
                 "files/{folderId}".replace("{folderId}", String.valueOf(folderId)), true);
     }
 

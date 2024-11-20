@@ -21,6 +21,7 @@ import java.lang.reflect.Method;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class StorageBuilderUtil {
 
@@ -292,45 +293,53 @@ public final class StorageBuilderUtil {
 
     private static void validateInputMappingMethod(
             @NotNull final StorageMethodInfo storageMethodInfo) {
-        if (storageMethodInfo.storageMethod().getReturnType() == void.class) {
+        final var invalidReturnTypes = List.of(void.class);
+        if (invalidReturnTypes.contains(storageMethodInfo.storageMethod().getReturnType())) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
-                            "Storage InputMapping method {0}::{1} is not valid: @InputMapping mapping method must not return void",
+                            "Storage InputMapping method {0}::{1} is not valid: @InputMapping mapping method return type must not be one of {2}",
                             storageMethodInfo.storageMethod().getDeclaringClass().getSimpleName(),
-                            storageMethodInfo.storageMethod().getName()));
+                            storageMethodInfo.storageMethod().getName(),
+                            invalidReturnTypes.stream().map(Class::getSimpleName).toList()));
         }
     }
 
     private static void validateDeleteMappingMethod(
             @NotNull final StorageMethodInfo storageMethodInfo) {
-        if (storageMethodInfo.storageMethod().getReturnType() == void.class) {
+        final var validReturnTypes = List.of(void.class, boolean.class);
+        if (!validReturnTypes.contains(storageMethodInfo.storageMethod().getReturnType())) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
-                            "Storage DeleteMapping method {0}::{1} is not valid: @DeleteMapping mapping method must not return void",
+                            "Storage DeleteMapping method {0}::{1} is not valid: @DeleteMapping mapping method return type must be one of {2}",
                             storageMethodInfo.storageMethod().getDeclaringClass().getSimpleName(),
-                            storageMethodInfo.storageMethod().getName()));
+                            storageMethodInfo.storageMethod().getName(),
+                            validReturnTypes.stream().map(Class::getSimpleName).toList()));
         }
     }
 
     private static void validateListMappingMethod(
             @NotNull final StorageMethodInfo storageMethodInfo) {
-        if (storageMethodInfo.storageMethod().getReturnType() == void.class) {
+        final var validReturnTypes = List.of(Collection.class, List.class, Set.class, Stream.class);
+        if (!validReturnTypes.contains(storageMethodInfo.storageMethod().getReturnType())) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
-                            "Storage ListMapping method {0}::{1} is not valid: @ListMapping mapping method must not return void",
+                            "Storage ListMapping method {0}::{1} is not valid: @ListMapping mapping method return type must be one of {2}",
                             storageMethodInfo.storageMethod().getDeclaringClass().getSimpleName(),
-                            storageMethodInfo.storageMethod().getName()));
+                            storageMethodInfo.storageMethod().getName(),
+                            validReturnTypes.stream().map(Class::getSimpleName).toList()));
         }
     }
 
     private static void validateExistsMappingMethod(
             @NotNull final StorageMethodInfo storageMethodInfo) {
-        if (storageMethodInfo.storageMethod().getReturnType() == void.class) {
+        final var validReturnTypes = List.of(boolean.class);
+        if (!validReturnTypes.contains(storageMethodInfo.storageMethod().getReturnType())) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
-                            "Storage ExistsMapping method {0}::{1} is not valid: @ExistsMapping mapping method must not return void",
+                            "Storage ExistsMapping method {0}::{1} is not valid: @ExistsMapping mapping method return type must be one of {2}",
                             storageMethodInfo.storageMethod().getDeclaringClass().getSimpleName(),
-                            storageMethodInfo.storageMethod().getName()));
+                            storageMethodInfo.storageMethod().getName(),
+                            validReturnTypes.stream().map(Class::getSimpleName).toList()));
         }
     }
 

@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.Set;
 
 @SuppressWarnings("unused")
@@ -172,16 +173,14 @@ class StorageImplementationTest {
         assertEquals(
                 storageClient.list("storage/files/5/"),
                 Set.of("storage/files/5/54.png", "storage/files/5/42.png"));
-        final var deletedFolder4 = testStorage.deleteFolder(4);
+        assertDoesNotThrow(() -> testStorage.deleteFolder(4));
         verify(storageClient).delete("storage/files/4", true);
-        assertFalse(deletedFolder4);
         assertEquals(
                 Set.of("storage/files/5/54.png", "storage/files/5/42.png"),
                 storageClient.list("storage/files/5/"));
 
-        final var deletedFolder5 = testStorage.deleteFolder(5);
+        assertDoesNotThrow(() -> testStorage.deleteFolder(5));
         verify(storageClient).delete("storage/files/5", true);
-        assertTrue(deletedFolder5);
         assertThrows(
                 NonRetryableStorageClientException.class,
                 () -> storageClient.list("storage/files/5/"));
@@ -241,24 +240,24 @@ class StorageImplementationTest {
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
                 () ->
-                        StorageBuilder.builder(NonVoidOutputMappingMethodStorage.class)
+                        StorageBuilder.builder(OutputMappingMethodIllegalReturnTypeString.class)
                                 .storageClient(storageClient)
                                 .classLoader(getClass().getClassLoader())
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage OutputMapping method NonVoidOutputMappingMethodStorage::mappingMethod is not valid: @OutputMapping mapping method must return void");
+                "Storage OutputMapping method OutputMappingMethodIllegalReturnTypeString::mappingMethod is not valid: @OutputMapping mapping method must return void");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
                 () ->
-                        StorageBuilder.builder(VoidInputMappingMethodStorage.class)
+                        StorageBuilder.builder(InputMappingMethodIllegalReturnTypeVoid.class)
                                 .storageClient(storageClient)
                                 .classLoader(getClass().getClassLoader())
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage InputMapping method VoidInputMappingMethodStorage::mappingMethod is not valid: @InputMapping mapping method must not return void");
+                "Storage InputMapping method InputMappingMethodIllegalReturnTypeVoid::mappingMethod is not valid: @InputMapping mapping method return type must not be one of [void]");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -270,6 +269,17 @@ class StorageImplementationTest {
                                 .basePath("storage")
                                 .build(),
                 "Storage OutputMapping method OutputMappingMethodNoStorageObject::mappingMethod is not valid: There must be exactly one parameter annotated with @StorageObject, found 0");
+
+        assertThrowsWithMessage(
+                IllegalArgumentException.class,
+                () ->
+                        StorageBuilder.builder(OutputMappingMethodIllegalReturnTypeString.class)
+                                .storageClient(storageClient)
+                                .classLoader(getClass().getClassLoader())
+                                .objectMapper(objectMapper)
+                                .basePath("storage")
+                                .build(),
+                "Storage OutputMapping method OutputMappingMethodIllegalReturnTypeString::mappingMethod is not valid: @OutputMapping mapping method must return void");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -327,18 +337,51 @@ class StorageImplementationTest {
                                 .basePath("storage")
                                 .build(),
                 "Storage method OutputMappingTooManyOutputMetaData::mappingMethod is not valid: There must be at most one parameter of type @class ch.ubique.backend.storage.OutputMetaData, found 2");
+
+        assertThrowsWithMessage(
+                IllegalArgumentException.class,
+                () ->
+                        StorageBuilder.builder(ListMappingIllegalReturnTypeIterable.class)
+                                .storageClient(storageClient)
+                                .classLoader(getClass().getClassLoader())
+                                .objectMapper(objectMapper)
+                                .basePath("storage")
+                                .build(),
+                "Storage ListMapping method ListMappingIllegalReturnTypeIterable::mappingMethod is not valid: @ListMapping mapping method return type must be one of [Collection, List, Set, Stream]");
+
+        assertThrowsWithMessage(
+                IllegalArgumentException.class,
+                () ->
+                        StorageBuilder.builder(ListMappingIllegalReturnTypeHashSet.class)
+                                .storageClient(storageClient)
+                                .classLoader(getClass().getClassLoader())
+                                .objectMapper(objectMapper)
+                                .basePath("storage")
+                                .build(),
+                "Storage ListMapping method ListMappingIllegalReturnTypeHashSet::mappingMethod is not valid: @ListMapping mapping method return type must be one of [Collection, List, Set, Stream]");
+
+        assertThrowsWithMessage(
+                IllegalArgumentException.class,
+                () ->
+                        StorageBuilder.builder(ExistsMappingIllegalReturnTypeBoolean.class)
+                                .storageClient(storageClient)
+                                .classLoader(getClass().getClassLoader())
+                                .objectMapper(objectMapper)
+                                .basePath("storage")
+                                .build(),
+                "Storage ExistsMapping method ExistsMappingIllegalReturnTypeBoolean::mappingMethod is not valid: @ExistsMapping mapping method return type must be one of [boolean]");
     }
 
     interface NonStorageMappingMethodStorage {
         void mappingMethod();
     }
 
-    interface NonVoidOutputMappingMethodStorage {
+    interface OutputMappingMethodIllegalReturnTypeString {
         @OutputMapping
         String mappingMethod(@StorageObject String storageObject);
     }
 
-    interface VoidInputMappingMethodStorage {
+    interface InputMappingMethodIllegalReturnTypeVoid {
         @InputMapping
         void mappingMethod();
     }
@@ -372,5 +415,25 @@ class StorageImplementationTest {
     interface OutputMappingTooManyOutputMetaData {
         @OutputMapping
         String mappingMethod(OutputMetaData outputMetaData1, OutputMetaData outputMetaData2);
+    }
+
+    interface DeleteMappingIllegalReturnTypeBoolean {
+        @DeleteMapping
+        Boolean mappingMethod();
+    }
+
+    interface ListMappingIllegalReturnTypeIterable {
+        @ListMapping
+        Iterable<Object> mappingMethod();
+    }
+
+    interface ListMappingIllegalReturnTypeHashSet {
+        @ListMapping
+        HashSet<Object> mappingMethod();
+    }
+
+    interface ExistsMappingIllegalReturnTypeBoolean {
+        @ExistsMapping
+        Boolean mappingMethod();
     }
 }
