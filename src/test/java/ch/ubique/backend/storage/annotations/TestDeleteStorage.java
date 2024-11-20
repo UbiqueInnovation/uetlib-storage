@@ -10,5 +10,5 @@ public interface TestDeleteStorage {
     boolean deleteFile(@StoragePathVariable String fileId) throws IOException;
 
     @DeleteMapping(path = "files/{folderId}", recursive = true, logLevel = Level.ERROR)
-    boolean deleteFolder(@StoragePathVariable int folderId) throws IOException;
+    void deleteFolder(@StoragePathVariable int folderId) throws IOException;
 }
