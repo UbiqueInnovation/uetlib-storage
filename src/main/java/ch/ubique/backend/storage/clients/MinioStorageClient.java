@@ -10,6 +10,8 @@ import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.storage.exception.NonRetryableStorageClientException;
+import ch.ubique.backend.storage.exception.RetryableStorageClientException;
 import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
@@ -143,7 +145,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                 | ServerException
                 | XmlParserException
                 | IOException e) {
-            throw StorageClientException.of(
+            throw storageClientException(
                     MessageFormat.format(
                             "failed to write for [path={0}, outputMetaData={1}, output={2}]",
                             path, outputMetaData, output),
@@ -196,7 +198,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                 | ServerException
                 | IOException
                 | XmlParserException e) {
-            throw StorageClientException.of(
+            throw storageClientException(
                     MessageFormat.format(
                             "failed to read for [path={0}, doUncompressIfNeeded={1}]",
                             path, doUncompressIfNeeded),
@@ -211,7 +213,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
         final var existing = list(path, true);
 
         if (existing.stream().anyMatch(object -> !object.equals(path)) && !recursive) {
-            throw StorageClientException.of(
+            throw storageClientException(
                     MessageFormat.format("can not delete not empty directory. [path={0}]", path),
                     new DirectoryNotEmptyException(path));
         }
@@ -241,7 +243,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                 | ServerException
                 | XmlParserException
                 | IOException e) {
-            throw StorageClientException.of(
+            throw storageClientException(
                     MessageFormat.format(
                             "failed to delete for [path={0}, recursive={1}]", path, recursive),
                     e);
@@ -275,7 +277,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                 | ServerException
                 | XmlParserException
                 | IOException e) {
-            throw StorageClientException.of(
+            throw storageClientException(
                     MessageFormat.format(
                             "failed to list for [mappingPath={0}, recursive={1}]", path, recursive),
                     e);
@@ -312,7 +314,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                 | ServerException
                 | XmlParserException
                 | IOException e) {
-            throw StorageClientException.of(
+            throw storageClientException(
                     MessageFormat.format(
                             "failed to get signed url for [mappingPath={0}, expiry={1}]",
                             path, expiry),
@@ -339,10 +341,27 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
                 | NoSuchAlgorithmException
                 | ServerException
                 | XmlParserException e) {
-            throw StorageClientException.of(
+            throw storageClientException(
                     MessageFormat.format(
                             "failed to create bucket for [bucketName={0}]", bucketName),
                     e);
         }
+    }
+
+    public static StorageClientException storageClientException(
+            final String message, final Throwable cause) {
+
+        if (cause instanceof ErrorResponseException
+                && cause.getMessage().contains("The specified key does not exist")) {
+            return new NonRetryableStorageClientException(message, cause);
+        }
+        if (cause instanceof InsufficientDataException
+                || cause instanceof InvalidResponseException
+                || cause instanceof ErrorResponseException
+                || cause instanceof InternalException
+                || cause instanceof ServerException) {
+            return new RetryableStorageClientException(message, cause);
+        }
+        return StorageClientException.of(message, cause);
     }
 }
