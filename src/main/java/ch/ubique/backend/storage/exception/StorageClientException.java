@@ -9,7 +9,7 @@ import io.minio.errors.ServerException;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.net.ConnectException;
+import java.net.SocketException;
 
 import javax.net.ssl.SSLHandshakeException;
 
@@ -21,10 +21,10 @@ public abstract sealed class StorageClientException extends IOException
     }
 
     public static StorageClientException of(final String message, final Throwable cause) {
-        if (cause instanceof ConnectException
-                || cause instanceof InterruptedIOException
+        if (cause instanceof InterruptedIOException
                 || cause instanceof SSLHandshakeException
                 || cause instanceof EOFException
+                || cause instanceof SocketException
                 // Minio specific
                 || cause instanceof InsufficientDataException
                 || cause instanceof InvalidResponseException
