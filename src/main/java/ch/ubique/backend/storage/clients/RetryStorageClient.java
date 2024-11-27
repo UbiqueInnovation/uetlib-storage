@@ -4,6 +4,7 @@ import static java.util.Objects.*;
 
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.storage.exception.RetryableStorageClientException;
 import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
@@ -25,7 +26,7 @@ public class RetryStorageClient implements StorageClient {
 
     private static final RetryTemplate DEFAULT_RETRY_TEMPLATE =
             RetryTemplate.builder()
-                    .retryOn(StorageClientException.class)
+                    .retryOn(RetryableStorageClientException.class)
                     .maxAttempts(10)
                     .uniformRandomBackoff(Duration.ofMillis(1), Duration.ofMillis(500))
                     .build();
