@@ -20,8 +20,11 @@ import com.google.common.net.HttpHeaders;
 import io.minio.messages.CannedAcl;
 
 import jakarta.annotation.Nullable;
+import jakarta.validation.ValidationException;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -41,8 +44,7 @@ import java.util.stream.Stream;
 public final class OutputMetaData {
     private static final Logger logger = LoggerFactory.getLogger(OutputMetaData.class);
 
-    private final @NotNull Duration maxAge;
-    private final @NotNull Duration sMaxAge;
+    private final @NotBlank String cacheControl;
 
     private Instant expires;
     private Instant bestBefore;
@@ -53,17 +55,33 @@ public final class OutputMetaData {
     private String customAccessPolicy;
 
     /**
+     * @param cacheControl must not be blank. You can create a valid value using e.g.
+     *     org.springframework.http.CacheControl.getHeaderValue
+     */
+    public OutputMetaData(final @NotNull String cacheControl) {
+        this.cacheControl = cacheControl;
+        if (StringUtils.isBlank(cacheControl)) {
+            throw new ValidationException("An empty cache control is disallowed.");
+        }
+    }
+
+    /**
      * @param maxAge Duration must not be null
      * @param sMaxAge Duration will be set to maxAge if null
      */
     public OutputMetaData(final @NotNull Duration maxAge, @Nullable final Duration sMaxAge) {
-        this.maxAge = requireNonNull(maxAge, "maxAge must not be null");
-        this.sMaxAge = requireNonNullElse(sMaxAge, maxAge);
+        this(
+                MAX_AGE
+                        + "="
+                        + requireNonNull(maxAge).toSeconds()
+                        + ", "
+                        + S_MAXAGE
+                        + "="
+                        + requireNonNullElse(sMaxAge, maxAge).toSeconds());
     }
 
     public OutputMetaData(final @NotNull OutputMetaData outputMetaData) {
-        this.maxAge = outputMetaData.maxAge;
-        this.sMaxAge = outputMetaData.sMaxAge;
+        this.cacheControl = outputMetaData.cacheControl;
         this.expires = outputMetaData.expires;
         this.bestBefore = outputMetaData.bestBefore;
         this.nextRefresh = outputMetaData.nextRefresh;
@@ -191,7 +209,7 @@ public final class OutputMetaData {
     }
 
     public String createCacheControl() {
-        return MAX_AGE + "=" + maxAge.toSeconds() + ", " + S_MAXAGE + "=" + sMaxAge.toSeconds();
+        return cacheControl;
     }
 
     public Optional<String> createCannedAcl() {
@@ -200,14 +218,18 @@ public final class OutputMetaData {
     }
 
     public Optional<String> expires() {
-        return Optional.ofNullable(expires).map(instant -> RFC_1123_DATE_TIME.format(instant.atZone(ZONE_ID_UTC)));
+        return Optional.ofNullable(expires)
+                .map(instant -> RFC_1123_DATE_TIME.format(instant.atZone(ZONE_ID_UTC)));
     }
 
     private List<Entry<String, String>> createStandardHeaderEntries() {
         final var entries = new ArrayList<Entry<String, String>>();
 
         if (expires != null) {
-            entries.add(entry(HttpHeaders.EXPIRES, RFC_1123_DATE_TIME.format(expires.atZone(ZONE_ID_UTC))));
+            entries.add(
+                    entry(
+                            HttpHeaders.EXPIRES,
+                            RFC_1123_DATE_TIME.format(expires.atZone(ZONE_ID_UTC))));
         }
 
         return entries;
@@ -217,10 +239,16 @@ public final class OutputMetaData {
         final var entries = new ArrayList<Entry<HttpHeader, String>>();
 
         if (nextRefresh != null) {
-            entries.add(entry(HttpHeader.NEXT_REFRESH, RFC_1123_DATE_TIME.format(nextRefresh.atZone(ZONE_ID_UTC))));
+            entries.add(
+                    entry(
+                            HttpHeader.NEXT_REFRESH,
+                            RFC_1123_DATE_TIME.format(nextRefresh.atZone(ZONE_ID_UTC))));
         }
         if (bestBefore != null) {
-            entries.add(entry(HttpHeader.BEST_BEFORE, RFC_1123_DATE_TIME.format(bestBefore.atZone(ZONE_ID_UTC))));
+            entries.add(
+                    entry(
+                            HttpHeader.BEST_BEFORE,
+                            RFC_1123_DATE_TIME.format(bestBefore.atZone(ZONE_ID_UTC))));
         }
         if (backoff != null) {
             entries.add(entry(HttpHeader.BACKOFF, String.valueOf(backoff.getSeconds())));
@@ -265,8 +293,7 @@ public final class OutputMetaData {
         }
 
         return new EqualsBuilder()
-                .append(maxAge, that.maxAge)
-                .append(sMaxAge, that.sMaxAge)
+                .append(cacheControl, that.cacheControl)
                 .append(expires, that.expires)
                 .append(bestBefore, that.bestBefore)
                 .append(nextRefresh, that.nextRefresh)
@@ -280,8 +307,7 @@ public final class OutputMetaData {
     @Override
     public int hashCode() {
         return new HashCodeBuilder(17, 37)
-                .append(maxAge)
-                .append(sMaxAge)
+                .append(cacheControl)
                 .append(expires)
                 .append(bestBefore)
                 .append(nextRefresh)
@@ -295,8 +321,7 @@ public final class OutputMetaData {
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-                .append("maxAge", maxAge)
-                .append("sMaxAge", sMaxAge)
+                .append("cacheControl", cacheControl)
                 .append("expires", expires)
                 .append("bestBefore", bestBefore)
                 .append("nextRefresh", nextRefresh)
