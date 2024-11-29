@@ -235,7 +235,7 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage interface NonStorageMappingMethodStorage is not valid: Method 'NonStorageMappingMethodStorage::mappingMethod' is not annotated by one of [interface ch.ubique.backend.storage.annotations.OutputMapping, interface ch.ubique.backend.storage.annotations.InputMapping, interface ch.ubique.backend.storage.annotations.DeleteMapping, interface ch.ubique.backend.storage.annotations.ListMapping, interface ch.ubique.backend.storage.annotations.ExistsMapping]");
+                "Storage interface NonStorageMappingMethodStorage is not valid: Method 'NonStorageMappingMethodStorage::mappingMethod' is not annotated by one of [@OutputMapping, @InputMapping, @DeleteMapping, @ListMapping, @ExistsMapping]");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -301,7 +301,7 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage method OutputMappingMethodIllegalParameterTypeObject::mappingMethod is not valid: Method parameter 'parameter' must either be one of type '[OutputMetaData, ObjectMapper]' or be annotated with one of [StorageObject, StoragePathVariable]");
+                "Storage method OutputMappingMethodIllegalParameterTypeObject::mappingMethod is not valid: Method parameter 'parameter' must either be one of type '[OutputMetaData, ObjectMapper]' or be annotated with one of [@StorageObject, @StoragePathVariable]");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -314,7 +314,7 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage method OutputMappingMethodIllegalParameterAnnotationTypeObject::mappingMethod is not valid: Method parameter 'parameter' must either be one of type '[OutputMetaData, ObjectMapper]' or be annotated with one of [StorageObject, StoragePathVariable]");
+                "Storage method OutputMappingMethodIllegalParameterAnnotationTypeObject::mappingMethod is not valid: Method parameter 'parameter' must either be one of type '[OutputMetaData, ObjectMapper]' or be annotated with one of [@StorageObject, @StoragePathVariable]");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
