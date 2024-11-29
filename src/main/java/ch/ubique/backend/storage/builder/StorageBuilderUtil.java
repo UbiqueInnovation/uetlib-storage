@@ -138,7 +138,13 @@ public final class StorageBuilderUtil {
                                                 "Storage interface {0} is not valid: Method ''{0}::{1}'' is not annotated by one of {2}",
                                                 method.getDeclaringClass().getSimpleName(),
                                                 method.getName(),
-                                                validStorageMappingAnnotationTypes));
+                                                validStorageMappingAnnotationTypes.stream()
+                                                        .map(
+                                                                a ->
+                                                                        MessageFormat.format(
+                                                                                "@{0}",
+                                                                                a.getSimpleName()))
+                                                        .toList()));
                             }
 
                             final var storageMethodInfo = findStorageMethodInfo(method);
@@ -179,7 +185,9 @@ public final class StorageBuilderUtil {
             final var validParameterTypeNames =
                     validParameterTypes.stream().map(Class::getSimpleName).toList();
             final var validParameterAnnotationTypeNames =
-                    validParameterAnnotationTypes.stream().map(Class::getSimpleName).toList();
+                    validParameterAnnotationTypes.stream()
+                            .map(a -> MessageFormat.format("@{0}", a.getSimpleName()))
+                            .toList();
 
             if (parameterAnnotations.length == 0 && !validParameterTypes.contains(parameterType)) {
                 throwMethodParameterNotValid(
