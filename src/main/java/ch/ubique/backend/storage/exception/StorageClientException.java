@@ -6,6 +6,7 @@ import java.io.InterruptedIOException;
 import java.net.SocketException;
 
 import javax.net.ssl.SSLHandshakeException;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 public abstract sealed class StorageClientException extends IOException
         permits NonRetryableStorageClientException, RetryableStorageClientException {
@@ -15,13 +16,21 @@ public abstract sealed class StorageClientException extends IOException
     }
 
     public static StorageClientException of(final String message, final Throwable cause) {
-        if (cause instanceof InterruptedIOException
-                || cause instanceof SSLHandshakeException
-                || cause instanceof EOFException
-                || cause instanceof SocketException) {
+        final var rootCause = ExceptionUtils.getRootCause(ExceptionUtils.getRootCause(cause));
+        if (isRetryable(cause) || isRetryable(rootCause)) {
             return new RetryableStorageClientException(message, cause);
         }
         return new NonRetryableStorageClientException(message, cause);
+    }
+
+    private static boolean isRetryable(final Throwable cause) {
+        if (cause == null) {
+            return false;
+        }
+        return cause instanceof InterruptedIOException
+                || cause instanceof SSLHandshakeException
+                || cause instanceof EOFException
+                || cause instanceof SocketException;
     }
 
     public boolean isRetryable() {
