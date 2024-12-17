@@ -7,16 +7,16 @@ import org.junit.jupiter.api.Test;
 
 import java.time.OffsetDateTime;
 
+@Disabled("Integration Test, which requires a valid Azure Blob Storage connection")
 class AzureBlobStorageClientTest {
 
     public static final String CONTAINER = "sac-private/v1";
     public static final String CONNECTION_STRING = "NOT_SET";
-    private final AzureBlobStorageClient azureBlobStorageClient =
-            new AzureBlobStorageClient(CONTAINER, CONNECTION_STRING);
 
     @Test
-    @Disabled("Integration Test, which requires a valid Azure Blob Storage connection")
     void getSignedUrl() {
+        final AzureBlobStorageClient azureBlobStorageClient =
+                new AzureBlobStorageClient(CONTAINER, CONNECTION_STRING);
         assertDoesNotThrow(
                 () -> {
                     final var signedUrl =
