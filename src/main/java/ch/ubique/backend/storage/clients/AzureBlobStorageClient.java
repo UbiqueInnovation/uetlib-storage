@@ -223,8 +223,7 @@ public class AzureBlobStorageClient implements StorageClient {
                 new BlobServiceSasSignatureValues(expiry, blobSasPermission)
                         .setStartTime(OffsetDateTime.now());
 
-        final var blobUrlEncoded = URLEncoder.encode(path, StandardCharsets.UTF_8);
-        final var blobClient = blobContainerClient.getBlobClient(blobUrlEncoded);
+        final var blobClient = blobContainerClient.getBlobClient(path);
 
         return URLDecoder.decode(blobClient.getBlobUrl(), StandardCharsets.UTF_8)
                 + "?"
