@@ -181,7 +181,7 @@ public class AzureBlobStorageClient implements StorageClient {
     @Override
     public boolean delete(final @NotNull String path, final boolean recursive)
             throws StorageClientException {
-        if(exists(path) && !recursive) {
+        if(blobExists(path) && !recursive) {
             return blobContainerClient.getBlobClient(path).deleteIfExists();
         }
         final var existing = list(path, true);
@@ -216,7 +216,11 @@ public class AzureBlobStorageClient implements StorageClient {
 
     @Override
     public boolean exists(final @NotNull String path) throws StorageClientException {
-        return blobContainerClient.getBlobClient(path).exists() || !list(path, false).isEmpty();
+        return blobExists(path) || !list(path, false).isEmpty();
+    }
+
+    private boolean blobExists(String path) {
+        return blobContainerClient.getBlobClient(path).exists();
     }
 
     @Override
