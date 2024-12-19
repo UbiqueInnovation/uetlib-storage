@@ -3,6 +3,7 @@ package ch.ubique.backend.storage.annotations;
 import static ch.ubique.backend.test.assertion.AssertionUtils.assertThrowsWithMessage;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
@@ -12,7 +13,6 @@ import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.builder.StorageBuilder;
 import ch.ubique.backend.storage.clients.FileSystemStorageClient;
-import ch.ubique.backend.storage.exception.NonRetryableStorageClientException;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.GZipOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
@@ -181,9 +181,7 @@ class StorageImplementationTest {
 
         assertDoesNotThrow(() -> testStorage.deleteFolder(5));
         verify(storageClient).delete("storage/files/5", true);
-        assertThrows(
-                NonRetryableStorageClientException.class,
-                () -> storageClient.list("storage/files/5/"));
+        assertEquals(Set.of(), storageClient.list("storage/files/5/"));
         assertFalse(storageClient.list("storage/files/").contains("storage/files/5/"));
     }
 
