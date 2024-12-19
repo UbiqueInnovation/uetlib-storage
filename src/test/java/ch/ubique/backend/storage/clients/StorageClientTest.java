@@ -161,5 +161,18 @@ class StorageClientTest {
 
         assertDoesNotThrow(() -> storageClient.delete("foo"));
         assertTrue(storageClient.list().isEmpty());
+
+        storageClient.write(new ByteOutput("Hello World".getBytes(StandardCharsets.UTF_8)), "foo/bar-baz");
+        assertEquals(
+                "Hello World",
+                readStringAndClose(
+                        URI.create(
+                                        storageClient.getSignedUrl(
+                                                "foo/bar-baz", OffsetDateTime.now().plusHours(1)))
+                                .toURL()
+                                .openStream()));
+
+        assertDoesNotThrow(() -> storageClient.delete("foo", true));
+        assertTrue(storageClient.list().isEmpty());
     }
 }
