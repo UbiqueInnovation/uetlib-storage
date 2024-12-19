@@ -150,6 +150,8 @@ class StorageClientTest {
         assertEquals(Set.of("foo", "bar/foo1", "bar/foo2"), storageClient.list(true));
         assertEquals(Set.of("bar/foo1", "bar/foo2"), storageClient.list("bar", true));
 
+        assertDoesNotThrow(() -> storageClient.delete("bar/nonExisting"));
+        assertDoesNotThrow(() -> storageClient.delete("nonExisting/bar"));
         assertDoesNotThrow(() -> storageClient.delete("bar/foo1"));
         assertFalse(storageClient.exists("bar/foo1"));
         assertEquals(Set.of("foo", "bar/foo2"), storageClient.list(true));
