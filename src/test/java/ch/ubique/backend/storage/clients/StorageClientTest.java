@@ -139,6 +139,7 @@ class StorageClientTest {
         assertTrue(storageClient.exists("bar/foo2"));
         assertFalse(storageClient.exists("nonExisting"));
 
+        assertEquals(Set.of("bar/foo1"), storageClient.list("bar/foo1"));
         assertEquals(Set.of("foo", "bar/"), storageClient.list());
         assertEquals(Set.of("foo", "bar/foo1", "bar/foo2"), storageClient.list(true));
         assertEquals(Set.of("bar/foo1", "bar/foo2"), storageClient.list("bar", true));
@@ -162,7 +163,8 @@ class StorageClientTest {
         assertDoesNotThrow(() -> storageClient.delete("foo"));
         assertTrue(storageClient.list().isEmpty());
 
-        storageClient.write(new ByteOutput("Hello World".getBytes(StandardCharsets.UTF_8)), "foo/bar-baz");
+        storageClient.write(
+                new ByteOutput("Hello World".getBytes(StandardCharsets.UTF_8)), "foo/bar-baz");
         assertEquals(
                 "Hello World",
                 readStringAndClose(

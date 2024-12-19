@@ -135,6 +135,9 @@ public class FileSystemStorageClient implements StorageClient {
             return mapToRelativePaths(files.stream());
         }
 
+        if (Files.isRegularFile(completePath)) {
+            return mapToRelativePaths(Stream.of(completePath.toFile()));
+        }
         try (final var paths = Files.list(completePath)) {
             return mapToRelativePaths(paths.map(Path::toFile));
         } catch (final IOException e) {
