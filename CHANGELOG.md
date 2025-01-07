@@ -1,8 +1,14 @@
 # CHANGELOG
 
+## 1.0.4
+
+- Made gzip writing and reading more consistent between different storage clients
+- Made reading more resilient to seemingly but not actually compressed resources.
+
 ## 1.0.3
 
-- Fixed delete of azure-client. Made sure the file system client behaves consistently with the other clients. 
+- Fixed delete of azure-client. Made sure the file system client behaves consistently with the other
+  clients.
 
 ## 1.0.2
 
