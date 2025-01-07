@@ -9,6 +9,7 @@ import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 
+import ch.ubique.backend.storage.utils.CompressionUtils;
 import com.azure.core.http.HttpClient;
 import com.azure.core.http.HttpHeaderName;
 import com.azure.core.http.rest.PagedIterable;
@@ -160,7 +161,7 @@ public class AzureBlobStorageClient implements StorageClient {
                                                 .get(HttpHeaderName.CONTENT_ENCODING))
                                 .map(Header::getValue)
                                 .orElse(null);
-                return InputStreamUtils.uncompress(inputStream, contentEncoding, path);
+                return CompressionUtils.tryToUncompress(inputStream, contentEncoding, path);
             }
 
             return inputStream;
@@ -181,7 +182,7 @@ public class AzureBlobStorageClient implements StorageClient {
     @Override
     public boolean delete(final @NotNull String path, final boolean recursive)
             throws StorageClientException {
-        if(blobExists(path) && !recursive) {
+        if (blobExists(path) && !recursive) {
             return blobContainerClient.getBlobClient(path).deleteIfExists();
         }
         final var existing = list(path, true);

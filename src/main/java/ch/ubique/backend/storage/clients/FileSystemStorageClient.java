@@ -1,12 +1,12 @@
 package ch.ubique.backend.storage.clients;
 
-import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 
+import ch.ubique.backend.storage.utils.CompressionUtils;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
@@ -67,7 +67,7 @@ public class FileSystemStorageClient implements StorageClient {
         }
         logger.trace("writing output to {} (complete path {})", path, completePath);
         try (final var outputStream = new FileOutputStream(file)) {
-            output.uncompressed().write(outputStream);
+            output.write(outputStream);
         } catch (final IOException e) {
             throw StorageClientException.of(
                     MessageFormat.format("failed to write for [path={0}]", path), e);
@@ -95,7 +95,8 @@ public class FileSystemStorageClient implements StorageClient {
             final var fileInputStream = new FileInputStream(file);
 
             if (doUncompressIfNeeded) {
-                return InputStreamUtils.uncompress(fileInputStream, null, path);
+                final var contentEncoding = isGzipFile(completePath) ? "gzip" : null;
+                return CompressionUtils.tryToUncompress(fileInputStream, contentEncoding, path);
             }
 
             return fileInputStream;
@@ -181,5 +182,15 @@ public class FileSystemStorageClient implements StorageClient {
 
     public String basePath() {
         return basePath;
+    }
+
+    private static boolean isGzipFile(final Path path) {
+        try (final InputStream inputStream = new FileInputStream(path.toFile())) {
+            final var header = new byte[2];
+            final var bytesRead = inputStream.read(header);
+            return bytesRead == 2 && header[0] == (byte) 0x1F && header[1] == (byte) 0x8B;
+        } catch (final IOException e) {
+            return false;
+        }
     }
 }

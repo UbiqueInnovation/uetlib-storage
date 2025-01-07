@@ -6,7 +6,6 @@ import static com.google.common.net.HttpHeaders.EXPIRES;
 
 import ch.ubique.backend.core.executor.VirtualThreadUtils;
 import ch.ubique.backend.core.http.header.HttpHeader;
-import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
@@ -15,6 +14,7 @@ import ch.ubique.backend.storage.exception.RetryableStorageClientException;
 import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
+import ch.ubique.backend.storage.utils.CompressionUtils;
 
 import io.minio.*;
 import io.minio.errors.ErrorResponseException;
@@ -185,7 +185,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
 
             if (doUncompressIfNeeded) {
                 final var contentEncoding = objectResponse.headers().get(CONTENT_ENCODING);
-                return InputStreamUtils.uncompress(objectResponse, contentEncoding, path);
+                return CompressionUtils.tryToUncompress(objectResponse, contentEncoding, path);
             }
 
             return objectResponse;

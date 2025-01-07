@@ -182,6 +182,25 @@ class StorageClientTest {
                                 .toURL()
                                 .openStream()));
 
+        storageClient.write(
+                new ByteOutput("Hello World".getBytes(StandardCharsets.UTF_8)).gZip(),
+                "foo/bar-baz.gz");
+        assertEquals("Hello World", readStringAndClose(storageClient.read("foo/bar-baz.gz")));
+
+        storageClient.write(
+                new ByteOutput("Hello World".getBytes(StandardCharsets.UTF_8)).gZip(),
+                "foo/bar-baz.other-extension");
+        assertEquals(
+                "Hello World",
+                readStringAndClose(storageClient.read("foo/bar-baz.other-extension")));
+
+        for (final var extension : Set.of(".gz", ".bz")) {
+            final var path = "foo/uncompressed" + extension;
+            storageClient.write(
+                    new ByteOutput("Hello World".getBytes(StandardCharsets.UTF_8)), path);
+            assertEquals("Hello World", readStringAndClose(storageClient.read(path)));
+        }
+
         assertDoesNotThrow(() -> storageClient.delete("foo", true));
         assertTrue(storageClient.list().isEmpty());
     }
