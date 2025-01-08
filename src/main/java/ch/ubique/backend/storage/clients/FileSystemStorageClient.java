@@ -188,6 +188,8 @@ public class FileSystemStorageClient implements StorageClient {
         try (final InputStream inputStream = new FileInputStream(path.toFile())) {
             final var header = new byte[2];
             final var bytesRead = inputStream.read(header);
+            // See https://en.wikipedia.org/wiki/Gzip
+            // The header of gzip always starts with the magic number 1f 8b
             return bytesRead == 2 && header[0] == (byte) 0x1F && header[1] == (byte) 0x8B;
         } catch (final IOException e) {
             return false;
