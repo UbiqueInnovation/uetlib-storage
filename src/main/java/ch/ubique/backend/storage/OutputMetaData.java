@@ -140,7 +140,7 @@ public final class OutputMetaData {
         resolvedOutputMetaData.contentLengthUncompressed(output.uncompressedContentLength());
     }
 
-    public OutputMetaData expires(final @NotNull Instant expires) {
+    public OutputMetaData createExpiresString(final @NotNull Instant expires) {
         this.expires = requireNonNull(expires);
         return this;
     }
@@ -217,7 +217,11 @@ public final class OutputMetaData {
                 .or(() -> Optional.ofNullable(accessPolicy).map(CannedAcl::toString));
     }
 
-    public Optional<String> expires() {
+    public Optional<Instant> expires() {
+        return Optional.ofNullable(expires);
+    }
+
+    public Optional<String> createExpiresString() {
         return Optional.ofNullable(expires)
                 .map(instant -> RFC_1123_DATE_TIME.format(instant.atZone(ZONE_ID_UTC)));
     }

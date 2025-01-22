@@ -122,7 +122,7 @@ public final class OutputMetaDataProvider {
 
         final var now = Instant.now();
         if (expiresOffset != null) {
-            outputMetaData.expires(now.plus(expiresOffset));
+            outputMetaData.createExpiresString(now.plus(expiresOffset));
         }
         if (bestBeforeOffset != null) {
             outputMetaData.bestBefore(now.plus(bestBeforeOffset));
