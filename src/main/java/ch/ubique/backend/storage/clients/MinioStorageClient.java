@@ -111,7 +111,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
 
         // Expires
         Optional.ofNullable(metaData)
-                .flatMap(OutputMetaData::expires)
+                .flatMap(OutputMetaData::createExpiresString)
                 .ifPresent(expires -> headers.put(EXPIRES, expires));
 
         // ACL (Access Control)
