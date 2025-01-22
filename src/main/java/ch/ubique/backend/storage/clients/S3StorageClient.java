@@ -1,7 +1,5 @@
 package ch.ubique.backend.storage.clients;
 
-import static com.google.common.net.HttpHeaders.*;
-
 import ch.ubique.backend.core.executor.VirtualThreadUtils;
 import ch.ubique.backend.core.http.header.HttpHeader;
 import ch.ubique.backend.storage.OutputMetaData;
@@ -13,11 +11,11 @@ import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
 
-import io.minio.errors.*;
-
 import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+
+import org.apache.commons.lang3.NotImplementedException;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -26,15 +24,18 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.DirectoryNotEmptyException;
 import java.text.MessageFormat;
 import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.*;
 
-public sealed class S3StorageClient implements StorageClient {
+public class S3StorageClient implements StorageClient {
 
     private final String bucket;
     private final S3Client s3Client;
@@ -58,33 +59,6 @@ public sealed class S3StorageClient implements StorageClient {
                                         AwsBasicCredentials.create(accessKey, secretKey)))
                         .endpointOverride(URI.create(endpoint))
                         .build();
-    }
-
-    @NotNull
-    private static Map<String, String> createHeaders(
-            @NotNull final Output output, @Nullable final OutputMetaData metaData) {
-        final var headers = new HashMap<String, String>();
-
-        // contentEncoding
-        output.contentEncoding()
-                .ifPresent(contentEncoding -> headers.put(CONTENT_ENCODING, contentEncoding));
-
-        // cacheControl
-        Optional.ofNullable(metaData)
-                .map(OutputMetaData::createCacheControl)
-                .ifPresent(cacheControl -> headers.put(CACHE_CONTROL, cacheControl));
-
-        // Expires
-        Optional.ofNullable(metaData)
-                .flatMap(OutputMetaData::createExpiresString)
-                .ifPresent(expires -> headers.put(EXPIRES, expires));
-
-        // ACL (Access Control)
-        Optional.ofNullable(metaData)
-                .flatMap(OutputMetaData::createCannedAcl)
-                .ifPresent(cannedAcl -> headers.put(HttpHeader.AMZ_ACL.value(), cannedAcl));
-
-        return headers;
     }
 
     @Override
@@ -246,20 +220,35 @@ public sealed class S3StorageClient implements StorageClient {
     public String getSignedUrl(final @NotNull String path, final @NotNull OffsetDateTime expiry)
             throws StorageClientException {
         try {
-            final var request = GetObjectRequest.builder().bucket(bucket).key(path).build();
-            final var presigner = S3Presigner.create();
-            final var presignedRequest =
-                    presigner.presignGetObject(
-                            builder ->
-                                    builder.getObjectRequest(request)
-                                            .signatureDuration(
-                                                    Duration.between(
-                                                            OffsetDateTime.now(), expiry)));
+            final PresignedGetObjectRequest presignedRequest;
+            try (final var presigner = S3Presigner.create()) {
+                presignedRequest =
+                        presigner.presignGetObject(
+                                builder ->
+                                        builder.getObjectRequest(
+                                                        getObjectRequestBuilder ->
+                                                                getObjectRequestBuilder
+                                                                        .bucket(bucket)
+                                                                        .key(path))
+                                                .signatureDuration(
+                                                        Duration.between(
+                                                                OffsetDateTime.now(), expiry)));
+            }
 
             return presignedRequest.url().toString();
         } catch (final Exception e) {
-            throw storageClientException("Failed to get signed URL for S3 object", e);
+            throw storageClientException(
+                    MessageFormat.format(
+                            "failed to get signed url for [mappingPath={0}, expiry={1}]",
+                            path, expiry),
+                    e);
         }
+    }
+
+    @Override
+    public final String getUrl(final @NotNull String path) {
+        throw new NotImplementedException(
+                "S3 does not support permanent share URLs? (Maximum is 7 days as per S3 spec)");
     }
 
     public static StorageClientException storageClientException(
