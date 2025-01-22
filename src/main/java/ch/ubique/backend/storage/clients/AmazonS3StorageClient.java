@@ -49,7 +49,10 @@ public final class AmazonS3StorageClient extends MinioStorageClient {
                                         "Failed to load AWS Web Identity Token", e);
                             }
                         },
-                        "sts."
+                        // NOTE: MinIO storage client doesn't prepend URL scheme to host
+                        "https://"
+                                // NOTE: assume regional (as opposed to global) STS endpoint
+                                + "sts."
                                 + Objects.requireNonNullElse(region, "eu-central-1")
                                 + ".amazonaws.com",
                         null,
