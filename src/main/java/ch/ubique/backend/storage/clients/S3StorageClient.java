@@ -18,6 +18,8 @@ import jakarta.validation.constraints.NotNull;
 import org.apache.commons.lang3.NotImplementedException;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.SdkClientException;
@@ -30,6 +32,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.nio.file.DirectoryNotEmptyException;
 import java.text.MessageFormat;
 import java.time.Duration;
@@ -43,6 +46,9 @@ public class S3StorageClient implements StorageClient {
     private final String bucket;
     private final S3Client s3Client;
     @Nullable private final OutputMetaDataProvider outputMetaDataProvider;
+    private final Region region;
+    private final AwsCredentialsProvider credentialsProvider;
+    @Nullable private final URI endpointOverride;
 
     /**
      * Uses web identity token credentials with STS to request temporary security credentials. See
@@ -63,10 +69,13 @@ public class S3StorageClient implements StorageClient {
     public S3StorageClient(final String bucket, @Nullable final String region) {
         this.bucket = bucket;
         this.outputMetaDataProvider = null;
+        this.region = Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION));
+        this.credentialsProvider = WebIdentityTokenFileCredentialsProvider.create();
+        this.endpointOverride = null;
         this.s3Client =
                 S3Client.builder()
-                        .credentialsProvider(WebIdentityTokenFileCredentialsProvider.create())
-                        .region(Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION)))
+                        .credentialsProvider(credentialsProvider)
+                        .region(this.region)
                         .build();
     }
 
@@ -90,8 +99,7 @@ public class S3StorageClient implements StorageClient {
 
     /**
      * @param bucket The bucket name
-     * @param region The endpoint URL of the S3 service. If null, the default region eu-central-1 is
-     *     used
+     * @param region The region of the S3 service. If null, the default region eu-central-1 is used
      * @param accessKey The AWS auth access key
      * @param secretKey The AWS auth secret key
      * @param timeout Timeout for requests (ignored for AWS S3)
@@ -106,10 +114,45 @@ public class S3StorageClient implements StorageClient {
             @Nullable final OutputMetaDataProvider outputMetaDataProvider) {
         this.bucket = bucket;
         this.outputMetaDataProvider = outputMetaDataProvider;
+        this.region = Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION));
+        this.credentialsProvider =
+                StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey));
+        this.endpointOverride = null;
         this.s3Client =
                 S3Client.builder()
-                        .credentialsProvider(() -> AwsBasicCredentials.create(accessKey, secretKey))
-                        .region(Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION)))
+                        .credentialsProvider(credentialsProvider)
+                        .region(this.region)
+                        .build();
+    }
+
+    /**
+     * Constructor only used for testing purposes.
+     *
+     * @param bucket The bucket name
+     * @param region The region of the S3 service. If null, the default region eu-central-1 is used
+     * @param endpoint The endpoint URL of the S3 service. If null, the default region eu-central-1
+     *     is used to create an S3 endpoint.
+     * @param accessKey The AWS auth access key
+     * @param secretKey The AWS auth secret key
+     */
+    protected S3StorageClient(
+            final String bucket,
+            @Nullable final String region,
+            final String endpoint,
+            final String accessKey,
+            final String secretKey) {
+        this.bucket = bucket;
+        this.outputMetaDataProvider = null;
+        this.region = Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION));
+        this.credentialsProvider =
+                StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey));
+        this.endpointOverride = URI.create(endpoint);
+        this.s3Client =
+                S3Client.builder()
+                        .credentialsProvider(credentialsProvider)
+                        .region(this.region)
+                        .endpointOverride(endpointOverride)
+                        .forcePathStyle(true)
                         .build();
     }
 
@@ -240,12 +283,23 @@ public class S3StorageClient implements StorageClient {
     public Collection<String> list(@NotNull final String path, final boolean recursive)
             throws StorageClientException {
         try {
-            final var listObjectsV2Request =
-                    ListObjectsV2Request.builder().bucket(bucket).prefix(path).build();
+            final var builder = ListObjectsV2Request.builder().bucket(bucket).prefix(path);
+
+            // If not recursive, group by common prefix
+            if (!recursive) {
+                builder.delimiter("/");
+            }
+
+            final var listObjectsV2Request = builder.build();
             final var listObjectsV2Response = s3Client.listObjectsV2(listObjectsV2Request);
 
             final var keys = new HashSet<String>();
             listObjectsV2Response.contents().forEach(s3Object -> keys.add(s3Object.key()));
+
+            // If not recursive, also list "folders" (i.e. common prefixes)
+            if (!recursive) {
+                listObjectsV2Response.commonPrefixes().forEach(prefix -> keys.add(prefix.prefix()));
+            }
             return keys;
         } catch (final AwsServiceException | SdkClientException e) {
             throw StorageClientException.of(
@@ -257,16 +311,7 @@ public class S3StorageClient implements StorageClient {
 
     @Override
     public boolean exists(final @NotNull String path) throws StorageClientException {
-        try {
-            final var headObjectRequest =
-                    HeadObjectRequest.builder().bucket(bucket).key(path).build();
-            s3Client.headObject(headObjectRequest);
-            return true;
-        } catch (final NoSuchKeyException e) {
-            return false;
-        } catch (final AwsServiceException | SdkClientException e) {
-            throw StorageClientException.of("Failed to check existence of object in S3", e);
-        }
+        return !list(path, false).isEmpty();
     }
 
     @Override
@@ -274,7 +319,16 @@ public class S3StorageClient implements StorageClient {
             throws StorageClientException {
         try {
             final PresignedGetObjectRequest presignedRequest;
-            try (final var presigner = S3Presigner.create()) {
+            try (final var presigner =
+                    S3Presigner.builder()
+                            .region(s3Client.serviceClientConfiguration().region())
+                            .credentialsProvider(
+                                    s3Client.serviceClientConfiguration().credentialsProvider())
+                            .endpointOverride(
+                                    s3Client.serviceClientConfiguration()
+                                            .endpointOverride()
+                                            .orElse(null))
+                            .build()) {
                 presignedRequest =
                         presigner.presignGetObject(
                                 builder ->
@@ -286,6 +340,16 @@ public class S3StorageClient implements StorageClient {
                                                 .signatureDuration(
                                                         Duration.between(
                                                                 OffsetDateTime.now(), expiry)));
+            }
+
+            if (s3Client.serviceClientConfiguration().endpointOverride().isPresent()) {
+                // endpoint overrides are used for testing purposes
+                // local S3 instances require path-style URLs - replace url
+                return presignedRequest
+                        .url()
+                        .toString()
+                        .replace(bucket + ".", "")
+                        .replace("/" + path, "/" + bucket + "/" + path);
             }
 
             return presignedRequest.url().toString();
@@ -302,5 +366,16 @@ public class S3StorageClient implements StorageClient {
     public final String getUrl(final @NotNull String path) {
         throw new NotImplementedException(
                 "S3 does not support permanent share URLs? (Maximum is 7 days as per S3 spec)");
+    }
+
+    public void createBucket(final String bucketName) throws StorageClientException {
+        try {
+            s3Client.createBucket(builder -> builder.bucket(bucketName));
+        } catch (final AwsServiceException | SdkClientException e) {
+            throw StorageClientException.of(
+                    MessageFormat.format(
+                            "failed to create bucket for [bucketName={0}]", bucketName),
+                    e);
+        }
     }
 }
