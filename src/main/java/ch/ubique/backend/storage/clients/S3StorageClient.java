@@ -87,7 +87,7 @@ public class S3StorageClient implements StorageClient {
      * @param region The endpoint URL of the S3 service. If null, the default endpoint, eu-central-1
      * @param accessKey The AWS auth access key
      * @param secretKey The AWS auth secret key
-     * @param timeout Timeout for requests
+     * @param timeout Timeout for requests (ignored for AWS S3)
      * @param outputMetaDataProvider Provider for output meta data
      */
     public S3StorageClient(
@@ -103,11 +103,6 @@ public class S3StorageClient implements StorageClient {
                 S3Client.builder()
                         .credentialsProvider(() -> AwsBasicCredentials.create(accessKey, secretKey))
                         .region(Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION)))
-                        .overrideConfiguration(
-                                b ->
-                                        b.apiCallTimeout(
-                                                Objects.requireNonNullElse(
-                                                        timeout, Duration.ofSeconds(15))))
                         .build();
     }
 
@@ -247,11 +242,12 @@ public class S3StorageClient implements StorageClient {
     public Collection<String> list(@NotNull final String path, final boolean recursive)
             throws StorageClientException {
         try {
-            final var request = ListObjectsV2Request.builder().bucket(bucket).prefix(path).build();
-            final var response = s3Client.listObjectsV2(request);
+            final var listObjectsV2Request =
+                    ListObjectsV2Request.builder().bucket(bucket).prefix(path).build();
+            final var listObjectsV2Response = s3Client.listObjectsV2(listObjectsV2Request);
 
             final var keys = new HashSet<String>();
-            response.contents().forEach(s3Object -> keys.add(s3Object.key()));
+            listObjectsV2Response.contents().forEach(s3Object -> keys.add(s3Object.key()));
             return keys;
         } catch (final AwsServiceException | SdkClientException e) {
             throw storageClientException(
@@ -264,8 +260,9 @@ public class S3StorageClient implements StorageClient {
     @Override
     public boolean exists(final @NotNull String path) throws StorageClientException {
         try {
-            final var request = HeadObjectRequest.builder().bucket(bucket).key(path).build();
-            s3Client.headObject(request);
+            final var headObjectRequest =
+                    HeadObjectRequest.builder().bucket(bucket).key(path).build();
+            s3Client.headObject(headObjectRequest);
             return true;
         } catch (final NoSuchKeyException e) {
             return false;
