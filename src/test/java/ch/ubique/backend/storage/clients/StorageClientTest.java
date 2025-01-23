@@ -15,7 +15,6 @@ import org.testcontainers.Testcontainers;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
 import org.testcontainers.images.PullPolicy;
-import software.amazon.awssdk.regions.Region;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,8 +49,7 @@ class StorageClientTest {
         runMinioCompatibleTest(
                 (bucket, endpoint, accessKey, secretKey) -> {
                     final var storageClient =
-                            new S3StorageClient(
-                                    bucket, null, endpoint, accessKey, secretKey);
+                            new S3StorageClient(bucket, null, endpoint, accessKey, secretKey);
                     storageClient.createBucket("test");
                     return storageClient;
                 });
@@ -142,14 +140,14 @@ class StorageClientTest {
 
         assertEquals("Hello World", readStringAndClose(storageClient.read("foo")));
 
-        // assertEquals(
-        //         "Hello World",
-        //         readStringAndClose(
-        //                 URI.create(
-        //                                 storageClient.getSignedUrl(
-        //                                         "foo", OffsetDateTime.now().plusHours(1)))
-        //                         .toURL()
-        //                         .openStream()));
+        assertEquals(
+                "Hello World",
+                readStringAndClose(
+                        URI.create(
+                                        storageClient.getSignedUrl(
+                                                "foo", OffsetDateTime.now().plusHours(1)))
+                                .toURL()
+                                .openStream()));
 
         storageClient.write(new ByteOutput(new byte[0]), "bar/foo1");
         storageClient.write(new ByteOutput(new byte[0]), "bar/foo2");
@@ -194,14 +192,14 @@ class StorageClientTest {
 
         storageClient.write(
                 new ByteOutput("Hello World".getBytes(StandardCharsets.UTF_8)), "foo/bar-baz");
-        // assertEquals(
-        //         "Hello World",
-        //         readStringAndClose(
-        //                 URI.create(
-        //                                 storageClient.getSignedUrl(
-        //                                         "foo/bar-baz", OffsetDateTime.now().plusHours(1)))
-        //                         .toURL()
-        //                         .openStream()));
+        assertEquals(
+                "Hello World",
+                readStringAndClose(
+                        URI.create(
+                                        storageClient.getSignedUrl(
+                                                "foo/bar-baz", OffsetDateTime.now().plusHours(1)))
+                                .toURL()
+                                .openStream()));
 
         storageClient.write(
                 new ByteOutput("Hello World".getBytes(StandardCharsets.UTF_8)).gZip(),

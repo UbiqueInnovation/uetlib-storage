@@ -16,6 +16,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.lang3.NotImplementedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -41,7 +43,9 @@ import java.util.*;
 
 public class S3StorageClient implements StorageClient {
 
+    private static final Logger logger = LoggerFactory.getLogger(S3StorageClient.class);
     private static final String DEFAULT_REGION = "eu-central-1";
+    private static final int DEFAULT_MAX_PART_SIZE = 8 * 1024 * 1024;
 
     private final String bucket;
     private final S3Client s3Client;
@@ -162,37 +166,96 @@ public class S3StorageClient implements StorageClient {
             final @NotNull String path,
             @Nullable final OutputMetaData outputMetaData)
             throws StorageClientException {
+
         final var metaData =
                 OutputMetaData.resolveOutputMetaData(
                         outputMetaData, outputMetaDataProvider, output);
+        final var contentType = Objects.requireNonNull(output.contentType());
+        final var contentEncoding = output.contentEncoding().orElse(null);
+        final var cacheControl =
+                Optional.ofNullable(outputMetaData)
+                        .map(OutputMetaData::createCacheControl)
+                        .orElse(null);
+        final var expires =
+                Optional.ofNullable(outputMetaData).flatMap(OutputMetaData::expires).orElse(null);
+        final var acl =
+                Optional.ofNullable(outputMetaData)
+                        .flatMap(OutputMetaData::createCannedAcl)
+                        .orElse(null);
 
         try (final var inputStream = output.read()) {
+            if (output.contentLength() < 0L || output.contentLength() > DEFAULT_MAX_PART_SIZE) {
+                logger.info(
+                        "Initiating multipart upload for object [path={}; size={}]",
+                        path,
+                        output.contentLength());
 
-            final var contentType = Objects.requireNonNull(output.contentType());
+                // object size is unknown or too large for a single PUT request
+                final var uploadId =
+                        s3Client.createMultipartUpload(
+                                        builder ->
+                                                builder.bucket(bucket)
+                                                        .key(path)
+                                                        .contentType(contentType)
+                                                        .contentEncoding(contentEncoding)
+                                                        .cacheControl(cacheControl)
+                                                        .expires(expires)
+                                                        .acl(acl)
+                                                        .metadata(createUserMetadata(metaData)))
+                                .uploadId();
 
-            final var request =
-                    PutObjectRequest.builder()
-                            .bucket(bucket)
-                            .key(path)
-                            .contentType(contentType)
-                            .contentEncoding(output.contentEncoding().orElse(null))
-                            .cacheControl(
-                                    Optional.ofNullable(outputMetaData)
-                                            .map(OutputMetaData::createCacheControl)
-                                            .orElse(null))
-                            .expires(
-                                    Optional.ofNullable(outputMetaData)
-                                            .flatMap(OutputMetaData::expires)
-                                            .orElse(null))
-                            .acl(
-                                    Optional.ofNullable(outputMetaData)
-                                            .flatMap(OutputMetaData::createCannedAcl)
-                                            .orElse(null))
-                            .metadata(createUserMetadata(metaData))
-                            .build();
+                final List<CompletedPart> completedParts = new ArrayList<>();
+                final var buffer = new byte[DEFAULT_MAX_PART_SIZE];
+                var partNumber = 1;
 
-            s3Client.putObject(
-                    request, RequestBody.fromInputStream(inputStream, output.contentLength()));
+                int bytesRead;
+                var totalBytesRead = 0;
+                while ((bytesRead =
+                                inputStream.read(
+                                        buffer, totalBytesRead, buffer.length - totalBytesRead))
+                        != -1) {
+                    totalBytesRead += bytesRead;
+
+                    if (totalBytesRead >= buffer.length) {
+                        // buffer is full
+                        uploadPart(path, partNumber, bytesRead, uploadId, buffer, completedParts);
+                        partNumber++;
+                        totalBytesRead = 0; // reset buffer
+                    }
+                }
+
+                if (totalBytesRead > 0) {
+                    // upload remaining bytes
+                    uploadPart(path, partNumber, totalBytesRead, uploadId, buffer, completedParts);
+                }
+
+                logger.info("Completing multipart upload for object [path={}]", path);
+
+                // Complete the multipart upload
+                s3Client.completeMultipartUpload(
+                        requestBuilder ->
+                                requestBuilder
+                                        .bucket(bucket)
+                                        .key(path)
+                                        .uploadId(uploadId)
+                                        .multipartUpload(
+                                                multipartUploadBuilder ->
+                                                        multipartUploadBuilder.parts(
+                                                                completedParts)));
+            } else {
+                // object size is known and reasonable
+                s3Client.putObject(
+                        builder ->
+                                builder.bucket(bucket)
+                                        .key(path)
+                                        .contentType(contentType)
+                                        .contentEncoding(contentEncoding)
+                                        .cacheControl(cacheControl)
+                                        .expires(expires)
+                                        .acl(acl)
+                                        .metadata(createUserMetadata(metaData)),
+                        RequestBody.fromInputStream(inputStream, output.contentLength()));
+            }
         } catch (final AwsServiceException | SdkClientException | IOException e) {
             throw StorageClientException.of(
                     MessageFormat.format(
@@ -200,6 +263,33 @@ public class S3StorageClient implements StorageClient {
                             path, outputMetaData, output),
                     e);
         }
+    }
+
+    private void uploadPart(
+            final String path,
+            final int partNumber,
+            final int bytesRead,
+            final String uploadId,
+            final byte[] buffer,
+            final List<CompletedPart> completedParts) {
+        logger.info("Uploading part [partNumber={}; bytesRead={}]", partNumber, bytesRead);
+        final var uploadPartRequest =
+                UploadPartRequest.builder()
+                        .bucket(bucket)
+                        .key(path)
+                        .uploadId(uploadId)
+                        .partNumber(partNumber)
+                        .build();
+
+        final var uploadPartResponse =
+                s3Client.uploadPart(
+                        uploadPartRequest, RequestBody.fromBytes(Arrays.copyOf(buffer, bytesRead)));
+
+        completedParts.add(
+                CompletedPart.builder()
+                        .partNumber(partNumber)
+                        .eTag(uploadPartResponse.eTag())
+                        .build());
     }
 
     private Map<String, String> createUserMetadata(final OutputMetaData outputMetaData) {
@@ -232,7 +322,7 @@ public class S3StorageClient implements StorageClient {
             final var response = s3Client.getObject(request);
 
             if (doUncompressIfNeeded) {
-                final var contentEncoding = response.response().metadata().get("Content-Encoding");
+                final var contentEncoding = response.response().contentEncoding();
                 return CompressionUtils.tryToUncompress(response, contentEncoding, path);
             }
 
