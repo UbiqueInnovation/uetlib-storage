@@ -30,7 +30,6 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 
 import java.io.InputStream;
 import java.nio.file.DirectoryNotEmptyException;
-import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -44,22 +43,28 @@ public class S3StorageClient implements StorageClient {
     private final S3Client s3Client;
     @Nullable private final OutputMetaDataProvider outputMetaDataProvider;
 
-    public S3StorageClient(
-            final String bucket,
-            @Nullable final String region,
-            final Path awsWebIdentityTokenFile,
-            final String awsRoleArn,
-            final Integer awsDurationSeconds) {
+    /**
+     * Uses web identity token credentials with STS to request temporary security credentials. See
+     * <a
+     * href=https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html>AssumeRoleWithWebIdentity</a>
+     * for details.
+     *
+     * <p>The credential provider will read relevant configuration details, in particular web
+     * identity token file path and aws role arn, from system properties or environment variables
+     * (AWS_WEB_IDENTITY_TOKEN_FILE, AWS_ROLE_ARN, AWS_STS_REGIONAL_ENDPOINTS). See <a
+     * href="https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html">Configuring
+     * environment variables for the AWS CLI</a>.
+     *
+     * @param bucket The bucket name
+     * @param region The endpoint URL of the S3 service. If null, the default region eu-central-1 is
+     *     used
+     */
+    public S3StorageClient(final String bucket, @Nullable final String region) {
         this.bucket = bucket;
         this.outputMetaDataProvider = null;
         this.s3Client =
                 S3Client.builder()
-                        .credentialsProvider(
-                                WebIdentityTokenFileCredentialsProvider.builder()
-                                        .roleArn(awsRoleArn)
-                                        .roleSessionDuration(Duration.ofSeconds(awsDurationSeconds))
-                                        .webIdentityTokenFile(awsWebIdentityTokenFile)
-                                        .build())
+                        .credentialsProvider(WebIdentityTokenFileCredentialsProvider.create())
                         .region(Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION)))
                         .build();
     }
@@ -84,7 +89,8 @@ public class S3StorageClient implements StorageClient {
 
     /**
      * @param bucket The bucket name
-     * @param region The endpoint URL of the S3 service. If null, the default endpoint, eu-central-1
+     * @param region The endpoint URL of the S3 service. If null, the default region eu-central-1 is
+     *     used
      * @param accessKey The AWS auth access key
      * @param secretKey The AWS auth secret key
      * @param timeout Timeout for requests (ignored for AWS S3)
