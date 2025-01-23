@@ -20,7 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
@@ -28,6 +27,7 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
@@ -50,9 +50,6 @@ public class S3StorageClient implements StorageClient {
     private final String bucket;
     private final S3Client s3Client;
     @Nullable private final OutputMetaDataProvider outputMetaDataProvider;
-    private final Region region;
-    private final AwsCredentialsProvider credentialsProvider;
-    @Nullable private final URI endpointOverride;
 
     /**
      * Uses web identity token credentials with STS to request temporary security credentials. See
@@ -73,13 +70,10 @@ public class S3StorageClient implements StorageClient {
     public S3StorageClient(final String bucket, @Nullable final String region) {
         this.bucket = bucket;
         this.outputMetaDataProvider = null;
-        this.region = Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION));
-        this.credentialsProvider = WebIdentityTokenFileCredentialsProvider.create();
-        this.endpointOverride = null;
         this.s3Client =
                 S3Client.builder()
-                        .credentialsProvider(credentialsProvider)
-                        .region(this.region)
+                        .credentialsProvider(WebIdentityTokenFileCredentialsProvider.create())
+                        .region(Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION)))
                         .build();
     }
 
@@ -118,14 +112,12 @@ public class S3StorageClient implements StorageClient {
             @Nullable final OutputMetaDataProvider outputMetaDataProvider) {
         this.bucket = bucket;
         this.outputMetaDataProvider = outputMetaDataProvider;
-        this.region = Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION));
-        this.credentialsProvider =
-                StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey));
-        this.endpointOverride = null;
         this.s3Client =
                 S3Client.builder()
-                        .credentialsProvider(credentialsProvider)
-                        .region(this.region)
+                        .credentialsProvider(
+                                StaticCredentialsProvider.create(
+                                        AwsBasicCredentials.create(accessKey, secretKey)))
+                        .region(Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION)))
                         .build();
     }
 
@@ -147,15 +139,13 @@ public class S3StorageClient implements StorageClient {
             final String secretKey) {
         this.bucket = bucket;
         this.outputMetaDataProvider = null;
-        this.region = Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION));
-        this.credentialsProvider =
-                StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey));
-        this.endpointOverride = URI.create(endpoint);
         this.s3Client =
                 S3Client.builder()
-                        .credentialsProvider(credentialsProvider)
-                        .region(this.region)
-                        .endpointOverride(endpointOverride)
+                        .credentialsProvider(
+                                StaticCredentialsProvider.create(
+                                        AwsBasicCredentials.create(accessKey, secretKey)))
+                        .region(Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION)))
+                        .endpointOverride(URI.create(endpoint))
                         .forcePathStyle(true)
                         .build();
     }
@@ -409,16 +399,21 @@ public class S3StorageClient implements StorageClient {
             throws StorageClientException {
         try {
             final PresignedGetObjectRequest presignedRequest;
-            try (final var presigner =
+            final var presignedBuilder =
                     S3Presigner.builder()
                             .region(s3Client.serviceClientConfiguration().region())
                             .credentialsProvider(
-                                    s3Client.serviceClientConfiguration().credentialsProvider())
-                            .endpointOverride(
-                                    s3Client.serviceClientConfiguration()
-                                            .endpointOverride()
-                                            .orElse(null))
-                            .build()) {
+                                    s3Client.serviceClientConfiguration().credentialsProvider());
+
+            if (s3Client.serviceClientConfiguration().endpointOverride().isPresent()) {
+                // endpoint overrides are only used for testing purposes - i.e. where path-style
+                // access is required
+                presignedBuilder.endpointOverride(
+                        s3Client.serviceClientConfiguration().endpointOverride().get());
+                presignedBuilder.serviceConfiguration(
+                        S3Configuration.builder().pathStyleAccessEnabled(true).build());
+            }
+            try (final var presigner = presignedBuilder.build()) {
                 presignedRequest =
                         presigner.presignGetObject(
                                 builder ->
@@ -430,16 +425,6 @@ public class S3StorageClient implements StorageClient {
                                                 .signatureDuration(
                                                         Duration.between(
                                                                 OffsetDateTime.now(), expiry)));
-            }
-
-            if (s3Client.serviceClientConfiguration().endpointOverride().isPresent()) {
-                // endpoint overrides are used for testing purposes
-                // local S3 instances require path-style URLs - replace url
-                return presignedRequest
-                        .url()
-                        .toString()
-                        .replace(bucket + ".", "")
-                        .replace("/" + path, "/" + bucket + "/" + path);
             }
 
             return presignedRequest.url().toString();
