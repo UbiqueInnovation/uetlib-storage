@@ -18,18 +18,19 @@ import jakarta.validation.constraints.NotNull;
 import org.apache.commons.lang3.NotImplementedException;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.io.InputStream;
-import java.net.URI;
 import java.nio.file.DirectoryNotEmptyException;
+import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -37,28 +38,85 @@ import java.util.*;
 
 public class S3StorageClient implements StorageClient {
 
+    private static final String DEFAULT_REGION = "eu-central-1";
+
     private final String bucket;
     private final S3Client s3Client;
     @Nullable private final OutputMetaDataProvider outputMetaDataProvider;
 
-    // TODO: add other constructors
     public S3StorageClient(
             final String bucket,
-            final String endpoint,
+            @Nullable final String region,
+            final Path awsWebIdentityTokenFile,
+            final String awsRoleArn,
+            final Integer awsDurationSeconds) {
+        this.bucket = bucket;
+        this.outputMetaDataProvider = null;
+        this.s3Client =
+                S3Client.builder()
+                        .credentialsProvider(
+                                WebIdentityTokenFileCredentialsProvider.builder()
+                                        .roleArn(awsRoleArn)
+                                        .roleSessionDuration(Duration.ofSeconds(awsDurationSeconds))
+                                        .webIdentityTokenFile(awsWebIdentityTokenFile)
+                                        .build())
+                        .region(Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION)))
+                        .build();
+    }
+
+    /**
+     * @see #S3StorageClient(String, String, String, String, Duration, OutputMetaDataProvider)
+     */
+    public S3StorageClient(final String bucket, final String accessKey, final String secretKey) {
+        this(bucket, null, accessKey, secretKey, null, null);
+    }
+
+    /**
+     * @see #S3StorageClient(String, String, String, String, Duration, OutputMetaDataProvider)
+     */
+    public S3StorageClient(
+            final String bucket,
+            @Nullable final String region,
+            final String accessKey,
+            final String secretKey) {
+        this(bucket, region, accessKey, secretKey, null, null);
+    }
+
+    /**
+     * @param bucket The bucket name
+     * @param region The endpoint URL of the S3 service. If null, the default endpoint, eu-central-1
+     * @param accessKey The AWS auth access key
+     * @param secretKey The AWS auth secret key
+     * @param timeout Timeout for requests
+     * @param outputMetaDataProvider Provider for output meta data
+     */
+    public S3StorageClient(
+            final String bucket,
+            @Nullable final String region,
             final String accessKey,
             final String secretKey,
             @Nullable final Duration timeout,
             @Nullable final OutputMetaDataProvider outputMetaDataProvider) {
-        // TODO: fix
         this.bucket = bucket;
         this.outputMetaDataProvider = outputMetaDataProvider;
         this.s3Client =
                 S3Client.builder()
-                        .credentialsProvider(
-                                StaticCredentialsProvider.create(
-                                        AwsBasicCredentials.create(accessKey, secretKey)))
-                        .endpointOverride(URI.create(endpoint))
+                        .credentialsProvider(() -> AwsBasicCredentials.create(accessKey, secretKey))
+                        .region(Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION)))
+                        .overrideConfiguration(
+                                b ->
+                                        b.apiCallTimeout(
+                                                Objects.requireNonNullElse(
+                                                        timeout, Duration.ofSeconds(15))))
                         .build();
+    }
+
+    public static StorageClientException storageClientException(
+            final String message, final Throwable cause) {
+        // TODO: Add support for retryable exceptions (see AWS SDK doc)
+        // TODO: Add support for non-retryable exceptions (see AWS SDK doc)
+        // TODO: In general, clean up exception handling
+        return StorageClientException.of(message, cause);
     }
 
     @Override
@@ -249,13 +307,5 @@ public class S3StorageClient implements StorageClient {
     public final String getUrl(final @NotNull String path) {
         throw new NotImplementedException(
                 "S3 does not support permanent share URLs? (Maximum is 7 days as per S3 spec)");
-    }
-
-    public static StorageClientException storageClientException(
-            final String message, final Throwable cause) {
-        // TODO: Add support for retryable exceptions (see AWS SDK doc)
-        // TODO: Add support for non-retryable exceptions (see AWS SDK doc)
-        // TODO: In general, clean up exception handling
-        return StorageClientException.of(message, cause);
     }
 }
