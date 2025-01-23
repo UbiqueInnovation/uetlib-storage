@@ -28,6 +28,7 @@ import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.DirectoryNotEmptyException;
 import java.text.MessageFormat;
@@ -112,14 +113,6 @@ public class S3StorageClient implements StorageClient {
                         .build();
     }
 
-    public static StorageClientException storageClientException(
-            final String message, final Throwable cause) {
-        // TODO: Add support for retryable exceptions (see AWS SDK doc)
-        // TODO: Add support for non-retryable exceptions (see AWS SDK doc)
-        // TODO: In general, clean up exception handling
-        return StorageClientException.of(message, cause);
-    }
-
     @Override
     public final void write(
             final @NotNull Output output,
@@ -157,8 +150,8 @@ public class S3StorageClient implements StorageClient {
 
             s3Client.putObject(
                     request, RequestBody.fromInputStream(inputStream, output.contentLength()));
-        } catch (final Exception e) {
-            throw storageClientException(
+        } catch (final AwsServiceException | SdkClientException | IOException e) {
+            throw StorageClientException.of(
                     MessageFormat.format(
                             "failed to write for [path={0}, outputMetaData={1}, output={2}]",
                             path, outputMetaData, output),
@@ -201,8 +194,8 @@ public class S3StorageClient implements StorageClient {
             }
 
             return response;
-        } catch (final Exception e) {
-            throw storageClientException(
+        } catch (final AwsServiceException | SdkClientException | IOException e) {
+            throw StorageClientException.of(
                     MessageFormat.format(
                             "failed to read for [path={0}, doUncompressIfNeeded={1}]",
                             path, doUncompressIfNeeded),
@@ -217,7 +210,7 @@ public class S3StorageClient implements StorageClient {
         final var existing = list(path, true);
 
         if (existing.stream().anyMatch(object -> !object.equals(path)) && !recursive) {
-            throw storageClientException(
+            throw StorageClientException.of(
                     MessageFormat.format("can not delete not empty directory. [path={0}]", path),
                     new DirectoryNotEmptyException(path));
         }
@@ -231,12 +224,11 @@ public class S3StorageClient implements StorageClient {
 
         final var delete = Delete.builder().objects(objectsToDelete).build();
 
-        // TODO: handle exceptions
         final var deleteObjectsResponse =
                 s3Client.deleteObjects(builder -> builder.bucket(bucket).delete(delete));
 
         if (!deleteObjectsResponse.errors().isEmpty()) {
-            throw storageClientException(
+            throw StorageClientException.of(
                     "Failed to delete object(s) from S3",
                     new S3StorageClientException(deleteObjectsResponse.errors()));
         }
@@ -256,7 +248,7 @@ public class S3StorageClient implements StorageClient {
             listObjectsV2Response.contents().forEach(s3Object -> keys.add(s3Object.key()));
             return keys;
         } catch (final AwsServiceException | SdkClientException e) {
-            throw storageClientException(
+            throw StorageClientException.of(
                     MessageFormat.format(
                             "failed to list for [mappingPath={0}, recursive={1}]", path, recursive),
                     e);
@@ -272,8 +264,8 @@ public class S3StorageClient implements StorageClient {
             return true;
         } catch (final NoSuchKeyException e) {
             return false;
-        } catch (final Exception e) {
-            throw storageClientException("Failed to check existence of object in S3", e);
+        } catch (final AwsServiceException | SdkClientException e) {
+            throw StorageClientException.of("Failed to check existence of object in S3", e);
         }
     }
 
@@ -297,8 +289,8 @@ public class S3StorageClient implements StorageClient {
             }
 
             return presignedRequest.url().toString();
-        } catch (final Exception e) {
-            throw storageClientException(
+        } catch (final AwsServiceException | SdkClientException e) {
+            throw StorageClientException.of(
                     MessageFormat.format(
                             "failed to get signed url for [mappingPath={0}, expiry={1}]",
                             path, expiry),
