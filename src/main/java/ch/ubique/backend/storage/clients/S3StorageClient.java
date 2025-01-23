@@ -287,7 +287,7 @@ public class S3StorageClient implements StorageClient {
     }
 
     protected String keyForCustomMetadata(final HttpHeader httpHeader) {
-        return httpHeader.withXPrefix();
+        return httpHeader.withAmazonPrefix();
     }
 
     @Override
