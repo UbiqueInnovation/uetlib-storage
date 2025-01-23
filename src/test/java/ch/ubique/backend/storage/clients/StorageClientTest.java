@@ -49,7 +49,7 @@ class StorageClientTest {
         runMinioCompatibleTest(
                 (bucket, endpoint, accessKey, secretKey) -> {
                     final var storageClient =
-                            new S3StorageClient(bucket, null, endpoint, accessKey, secretKey);
+                            new AmazonS3StorageClient(bucket, null, endpoint, accessKey, secretKey);
                     storageClient.createBucket("test");
                     return storageClient;
                 });
