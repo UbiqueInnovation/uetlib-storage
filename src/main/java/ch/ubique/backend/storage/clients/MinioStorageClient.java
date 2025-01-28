@@ -111,7 +111,7 @@ public class MinioStorageClient implements StorageClient {
 
         // Expires
         Optional.ofNullable(metaData)
-                .flatMap(OutputMetaData::createExpiresString)
+                .flatMap(OutputMetaData::expires)
                 .ifPresent(expires -> headers.put(EXPIRES, expires));
 
         // ACL (Access Control)

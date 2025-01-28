@@ -168,7 +168,7 @@ public class AmazonS3StorageClient implements StorageClient {
                         .map(OutputMetaData::createCacheControl)
                         .orElse(null);
         final var expires =
-                Optional.ofNullable(outputMetaData).flatMap(OutputMetaData::expires).orElse(null);
+                Optional.ofNullable(outputMetaData).flatMap(OutputMetaData::expiresAsInstant).orElse(null);
         final var acl =
                 Optional.ofNullable(outputMetaData)
                         .flatMap(OutputMetaData::createCannedAcl)
