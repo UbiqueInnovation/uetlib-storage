@@ -80,7 +80,8 @@ public class AmazonS3StorageClient implements StorageClient {
     /**
      * @see #AmazonS3StorageClient(String, String, String, String, Duration, OutputMetaDataProvider)
      */
-    public AmazonS3StorageClient(final String bucket, final String accessKey, final String secretKey) {
+    public AmazonS3StorageClient(
+            final String bucket, final String accessKey, final String secretKey) {
         this(bucket, null, accessKey, secretKey, null, null);
     }
 
@@ -175,7 +176,7 @@ public class AmazonS3StorageClient implements StorageClient {
 
         try (final var inputStream = output.read()) {
             if (output.contentLength() < 0L || output.contentLength() > DEFAULT_MAX_PART_SIZE) {
-                logger.info(
+                logger.trace(
                         "Initiating multipart upload for object [path={}; size={}]",
                         path,
                         output.contentLength());
@@ -219,7 +220,7 @@ public class AmazonS3StorageClient implements StorageClient {
                     uploadPart(path, partNumber, totalBytesRead, uploadId, buffer, completedParts);
                 }
 
-                logger.info("Completing multipart upload for object [path={}]", path);
+                logger.trace("Completing multipart upload for object [path={}]", path);
 
                 // Complete the multipart upload
                 s3Client.completeMultipartUpload(
@@ -262,7 +263,7 @@ public class AmazonS3StorageClient implements StorageClient {
             final String uploadId,
             final byte[] buffer,
             final List<CompletedPart> completedParts) {
-        logger.info("Uploading part [partNumber={}; bytesRead={}]", partNumber, bytesRead);
+        logger.trace("Uploading part [partNumber={}; bytesRead={}]", partNumber, bytesRead);
         final var uploadPartRequest =
                 UploadPartRequest.builder()
                         .bucket(bucket)
