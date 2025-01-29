@@ -270,21 +270,26 @@ public class AmazonS3StorageClient implements StorageClient {
                                 .toList()
                         : List.of(ObjectIdentifier.builder().key(path).build());
 
-        final var deleteObjectsResponse =
-                s3AsyncClient
-                        .deleteObjects(
-                                builder ->
-                                        builder.bucket(bucket)
-                                                .delete(
-                                                        deleteBuilder ->
-                                                                deleteBuilder.objects(
-                                                                        objectsToDelete)))
-                        .join();
+        final var errors = new ArrayList<S3Error>();
+        for (var chunkIdx = 0; chunkIdx < objectsToDelete.size(); chunkIdx += 1000) {
+            // delete doesn't accept more than 1000 objects at once
+            final var chunkEnd = Math.min(chunkIdx + 1000, objectsToDelete.size());
+            final var chunk = objectsToDelete.subList(chunkIdx, chunkEnd);
+            final var deleteObjectsResponse =
+                    s3AsyncClient
+                            .deleteObjects(
+                                    builder ->
+                                            builder.bucket(bucket)
+                                                    .delete(
+                                                            deleteBuilder ->
+                                                                    deleteBuilder.objects(chunk)))
+                            .join();
+            errors.addAll(deleteObjectsResponse.errors());
+        }
 
-        if (!deleteObjectsResponse.errors().isEmpty()) {
+        if (!errors.isEmpty()) {
             throw StorageClientException.of(
-                    "Failed to delete object(s) from S3",
-                    new S3StorageClientException(deleteObjectsResponse.errors()));
+                    "Failed to delete object(s) from S3", new S3StorageClientException(errors));
         }
 
         return true;
