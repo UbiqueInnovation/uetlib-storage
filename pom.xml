@@ -42,6 +42,12 @@
             <artifactId>s3-transfer-manager</artifactId>
         </dependency>
 
+        <!--    Http client used by AWS S3 SDK    -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>netty-nio-client</artifactId>
+        </dependency>
+
         <!-- Reflections -->
         <dependency>
             <groupId>org.reflections</groupId>

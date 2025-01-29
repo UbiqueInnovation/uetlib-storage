@@ -23,6 +23,7 @@ import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsPr
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Configuration;
@@ -45,6 +46,7 @@ import java.util.concurrent.*;
 public class AmazonS3StorageClient implements StorageClient {
 
     private static final String DEFAULT_REGION = "eu-central-1";
+    private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(15);
 
     private final String bucket;
     private final S3TransferManager tm;
@@ -78,6 +80,11 @@ public class AmazonS3StorageClient implements StorageClient {
                         .multipartEnabled(true)
                         // TODO: test in deployment if checksums work as expected for gzip uploads
                         .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
+                        .httpClientBuilder(
+                                NettyNioAsyncHttpClient.builder()
+                                        .connectionTimeout(DEFAULT_TIMEOUT)
+                                        .readTimeout(DEFAULT_TIMEOUT)
+                                        .writeTimeout(DEFAULT_TIMEOUT))
                         .build();
         this.tm = S3TransferManager.builder().s3Client(s3AsyncClient).build();
     }
@@ -118,6 +125,7 @@ public class AmazonS3StorageClient implements StorageClient {
             @Nullable final OutputMetaDataProvider outputMetaDataProvider) {
         this.bucket = bucket;
         this.outputMetaDataProvider = outputMetaDataProvider;
+        final var timeoutOrDefault = Objects.requireNonNullElse(timeout, DEFAULT_TIMEOUT);
         this.s3AsyncClient =
                 S3AsyncClient.builder()
                         .credentialsProvider(
@@ -125,6 +133,12 @@ public class AmazonS3StorageClient implements StorageClient {
                                         AwsBasicCredentials.create(accessKey, secretKey)))
                         .region(Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION)))
                         .multipartEnabled(true)
+                        .httpClientBuilder(
+                                NettyNioAsyncHttpClient.builder()
+                                        .connectionTimeout(timeoutOrDefault)
+                                        .readTimeout(timeoutOrDefault)
+                                        .writeTimeout(timeoutOrDefault))
+                        // TODO: test in deployment if checksums work as expected for gzip uploads
                         .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
                         .build();
         this.tm = S3TransferManager.builder().s3Client(s3AsyncClient).build();
