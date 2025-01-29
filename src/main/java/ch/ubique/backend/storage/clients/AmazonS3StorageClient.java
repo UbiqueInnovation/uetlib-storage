@@ -16,21 +16,21 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.lang3.NotImplementedException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider;
-import software.amazon.awssdk.awscore.exception.AwsServiceException;
-import software.amazon.awssdk.core.exception.SdkClientException;
-import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.core.async.AsyncResponseTransformer;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
+import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.awssdk.transfer.s3.progress.LoggingTransferListener;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,16 +40,17 @@ import java.text.MessageFormat;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.concurrent.*;
 
 public class AmazonS3StorageClient implements StorageClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(AmazonS3StorageClient.class);
     private static final String DEFAULT_REGION = "eu-central-1";
-    private static final int DEFAULT_MAX_PART_SIZE = 8 * 1024 * 1024;
 
     private final String bucket;
-    private final S3Client s3Client;
+    private final S3TransferManager tm;
+    private final S3AsyncClient s3AsyncClient;
     @Nullable private final OutputMetaDataProvider outputMetaDataProvider;
+    private final ExecutorService taskExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     /**
      * Uses web identity token credentials with STS to request temporary security credentials. See
@@ -70,11 +71,14 @@ public class AmazonS3StorageClient implements StorageClient {
     public AmazonS3StorageClient(final String bucket, @Nullable final String region) {
         this.bucket = bucket;
         this.outputMetaDataProvider = null;
-        this.s3Client =
-                S3Client.builder()
+        this.s3AsyncClient =
+                S3AsyncClient.builder()
                         .credentialsProvider(WebIdentityTokenFileCredentialsProvider.create())
                         .region(Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION)))
+                        .multipartEnabled(true)
+                        .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
                         .build();
+        this.tm = S3TransferManager.builder().s3Client(s3AsyncClient).build();
     }
 
     /**
@@ -113,17 +117,22 @@ public class AmazonS3StorageClient implements StorageClient {
             @Nullable final OutputMetaDataProvider outputMetaDataProvider) {
         this.bucket = bucket;
         this.outputMetaDataProvider = outputMetaDataProvider;
-        this.s3Client =
-                S3Client.builder()
+        this.s3AsyncClient =
+                S3AsyncClient.builder()
                         .credentialsProvider(
                                 StaticCredentialsProvider.create(
                                         AwsBasicCredentials.create(accessKey, secretKey)))
                         .region(Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION)))
+                        .multipartEnabled(true)
+                        .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
                         .build();
+        this.tm = S3TransferManager.builder().s3Client(s3AsyncClient).build();
     }
 
     /**
-     * Constructor only used for testing purposes.
+     * TODO: (meinen) replace with constructor accepting built s3client
+     *
+     * <p>Constructor only used for testing purposes.
      *
      * @param bucket The bucket name
      * @param region The region of the S3 service. If null, the default region eu-central-1 is used
@@ -140,15 +149,18 @@ public class AmazonS3StorageClient implements StorageClient {
             final String secretKey) {
         this.bucket = bucket;
         this.outputMetaDataProvider = null;
-        this.s3Client =
-                S3Client.builder()
+        this.s3AsyncClient =
+                S3AsyncClient.builder()
                         .credentialsProvider(
                                 StaticCredentialsProvider.create(
                                         AwsBasicCredentials.create(accessKey, secretKey)))
                         .region(Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION)))
+                        .multipartEnabled(true)
                         .endpointOverride(URI.create(endpoint))
                         .forcePathStyle(true)
+                        .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
                         .build();
+        this.tm = S3TransferManager.builder().s3Client(s3AsyncClient).build();
     }
 
     @Override
@@ -157,130 +169,59 @@ public class AmazonS3StorageClient implements StorageClient {
             final @NotNull String path,
             @Nullable final OutputMetaData outputMetaData)
             throws StorageClientException {
-
-        final var metaData =
-                OutputMetaData.resolveOutputMetaData(
-                        outputMetaData, outputMetaDataProvider, output);
-        final var contentType = Objects.requireNonNull(output.contentType());
-        final var contentEncoding = output.contentEncoding().orElse(null);
-        final var cacheControl =
-                Optional.ofNullable(outputMetaData)
-                        .map(OutputMetaData::createCacheControl)
-                        .orElse(null);
-        final var expires =
-                Optional.ofNullable(outputMetaData).flatMap(OutputMetaData::expiresAsInstant).orElse(null);
-        final var acl =
-                Optional.ofNullable(outputMetaData)
-                        .flatMap(OutputMetaData::createCannedAcl)
-                        .orElse(null);
-
         try (final var inputStream = output.read()) {
-            if (output.contentLength() < 0L || output.contentLength() > DEFAULT_MAX_PART_SIZE) {
-                logger.trace(
-                        "Initiating multipart upload for object [path={}; size={}]",
-                        path,
-                        output.contentLength());
-
-                // object size is unknown or too large for a single PUT request
-                final var uploadId =
-                        s3Client.createMultipartUpload(
-                                        builder ->
-                                                builder.bucket(bucket)
-                                                        .key(path)
-                                                        .contentType(contentType)
-                                                        .contentEncoding(contentEncoding)
-                                                        .cacheControl(cacheControl)
-                                                        .expires(expires)
-                                                        .acl(acl)
-                                                        .metadata(createUserMetadata(metaData)))
-                                .uploadId();
-
-                final List<CompletedPart> completedParts = new ArrayList<>();
-                final var buffer = new byte[DEFAULT_MAX_PART_SIZE];
-                var partNumber = 1;
-
-                int bytesRead;
-                var totalBytesRead = 0;
-                while ((bytesRead =
-                                inputStream.read(
-                                        buffer, totalBytesRead, buffer.length - totalBytesRead))
-                        != -1) {
-                    totalBytesRead += bytesRead;
-
-                    if (totalBytesRead >= buffer.length) {
-                        // buffer is full
-                        uploadPart(path, partNumber, bytesRead, uploadId, buffer, completedParts);
-                        partNumber++;
-                        totalBytesRead = 0; // reset buffer
-                    }
-                }
-
-                if (totalBytesRead > 0) {
-                    // upload remaining bytes
-                    uploadPart(path, partNumber, totalBytesRead, uploadId, buffer, completedParts);
-                }
-
-                logger.trace("Completing multipart upload for object [path={}]", path);
-
-                // Complete the multipart upload
-                s3Client.completeMultipartUpload(
-                        requestBuilder ->
-                                requestBuilder
-                                        .bucket(bucket)
-                                        .key(path)
-                                        .uploadId(uploadId)
-                                        .multipartUpload(
-                                                multipartUploadBuilder ->
-                                                        multipartUploadBuilder.parts(
-                                                                completedParts)));
-            } else {
-                // object size is known and reasonable
-                s3Client.putObject(
-                        builder ->
-                                builder.bucket(bucket)
-                                        .key(path)
-                                        .contentType(contentType)
-                                        .contentEncoding(contentEncoding)
-                                        .cacheControl(cacheControl)
-                                        .expires(expires)
-                                        .acl(acl)
-                                        .metadata(createUserMetadata(metaData)),
-                        RequestBody.fromInputStream(inputStream, output.contentLength()));
-            }
-        } catch (final AwsServiceException | SdkClientException | IOException e) {
+            final var metaData =
+                    OutputMetaData.resolveOutputMetaData(
+                            outputMetaData, outputMetaDataProvider, output);
+            final var contentType = Objects.requireNonNull(output.contentType());
+            final var contentEncoding = output.contentEncoding().orElse(null);
+            final var cacheControl =
+                    Optional.ofNullable(outputMetaData)
+                            .map(OutputMetaData::createCacheControl)
+                            .orElse(null);
+            final var expires =
+                    Optional.ofNullable(outputMetaData)
+                            .flatMap(OutputMetaData::expiresAsInstant)
+                            .orElse(null);
+            final var acl =
+                    Optional.ofNullable(outputMetaData)
+                            .flatMap(OutputMetaData::createCannedAcl)
+                            .orElse(null);
+            final var upload =
+                    tm.upload(
+                            uploadRequestBuilder ->
+                                    uploadRequestBuilder
+                                            .requestBody(
+                                                    AsyncRequestBody.fromInputStream(
+                                                            inputStream,
+                                                            output.contentLength() < 0L
+                                                                    ? null
+                                                                    : output.contentLength(),
+                                                            taskExecutor))
+                                            .addTransferListener(LoggingTransferListener.create())
+                                            .putObjectRequest(
+                                                    req ->
+                                                            req.bucket(bucket)
+                                                                    .key(path)
+                                                                    .contentType(contentType)
+                                                                    .contentEncoding(
+                                                                            contentEncoding)
+                                                                    .cacheControl(cacheControl)
+                                                                    .expires(expires)
+                                                                    .acl(acl)
+                                                                    .metadata(
+                                                                            createUserMetadata(
+                                                                                    metaData))));
+            // Wait for the upload to finish - exceptions aren't thrown until 'join' is called
+            upload.completionFuture().join();
+        } catch (final CancellationException | CompletionException | IOException e) {
+            // TODO: (meinen) handle exceptions properly
             throw StorageClientException.of(
                     MessageFormat.format(
                             "failed to write for [path={0}, outputMetaData={1}, output={2}]",
                             path, outputMetaData, output),
                     e);
         }
-    }
-
-    private void uploadPart(
-            final String path,
-            final int partNumber,
-            final int bytesRead,
-            final String uploadId,
-            final byte[] buffer,
-            final List<CompletedPart> completedParts) {
-        logger.trace("Uploading part [partNumber={}; bytesRead={}]", partNumber, bytesRead);
-        final var uploadPartRequest =
-                UploadPartRequest.builder()
-                        .bucket(bucket)
-                        .key(path)
-                        .uploadId(uploadId)
-                        .partNumber(partNumber)
-                        .build();
-
-        final var uploadPartResponse =
-                s3Client.uploadPart(
-                        uploadPartRequest, RequestBody.fromBytes(Arrays.copyOf(buffer, bytesRead)));
-
-        completedParts.add(
-                CompletedPart.builder()
-                        .partNumber(partNumber)
-                        .eTag(uploadPartResponse.eTag())
-                        .build());
     }
 
     private Map<String, String> createUserMetadata(final OutputMetaData outputMetaData) {
@@ -310,7 +251,10 @@ public class AmazonS3StorageClient implements StorageClient {
             throws StorageClientException {
         try {
             final var request = GetObjectRequest.builder().bucket(bucket).key(path).build();
-            final var response = s3Client.getObject(request);
+            final var response =
+                    s3AsyncClient
+                            .getObject(request, AsyncResponseTransformer.toBlockingInputStream())
+                            .join();
 
             if (doUncompressIfNeeded) {
                 final var contentEncoding = response.response().contentEncoding();
@@ -318,7 +262,7 @@ public class AmazonS3StorageClient implements StorageClient {
             }
 
             return response;
-        } catch (final AwsServiceException | SdkClientException | IOException e) {
+        } catch (final CancellationException | CompletionException | IOException e) {
             throw StorageClientException.of(
                     MessageFormat.format(
                             "failed to read for [path={0}, doUncompressIfNeeded={1}]",
@@ -346,10 +290,16 @@ public class AmazonS3StorageClient implements StorageClient {
                                 .toList()
                         : List.of(ObjectIdentifier.builder().key(path).build());
 
-        final var delete = Delete.builder().objects(objectsToDelete).build();
-
         final var deleteObjectsResponse =
-                s3Client.deleteObjects(builder -> builder.bucket(bucket).delete(delete));
+                s3AsyncClient
+                        .deleteObjects(
+                                builder ->
+                                        builder.bucket(bucket)
+                                                .delete(
+                                                        deleteBuilder ->
+                                                                deleteBuilder.objects(
+                                                                        objectsToDelete)))
+                        .join();
 
         if (!deleteObjectsResponse.errors().isEmpty()) {
             throw StorageClientException.of(
@@ -372,7 +322,8 @@ public class AmazonS3StorageClient implements StorageClient {
             }
 
             final var listObjectsV2Request = builder.build();
-            final var listObjectsV2Response = s3Client.listObjectsV2(listObjectsV2Request);
+            final var listObjectsV2Response =
+                    s3AsyncClient.listObjectsV2(listObjectsV2Request).join();
 
             final var keys = new HashSet<String>();
             listObjectsV2Response.contents().forEach(s3Object -> keys.add(s3Object.key()));
@@ -382,7 +333,7 @@ public class AmazonS3StorageClient implements StorageClient {
                 listObjectsV2Response.commonPrefixes().forEach(prefix -> keys.add(prefix.prefix()));
             }
             return keys;
-        } catch (final AwsServiceException | SdkClientException e) {
+        } catch (final CancellationException | CompletionException e) {
             throw StorageClientException.of(
                     MessageFormat.format(
                             "failed to list for [mappingPath={0}, recursive={1}]", path, recursive),
@@ -402,15 +353,17 @@ public class AmazonS3StorageClient implements StorageClient {
             final PresignedGetObjectRequest presignedRequest;
             final var presignedBuilder =
                     S3Presigner.builder()
-                            .region(s3Client.serviceClientConfiguration().region())
+                            .region(s3AsyncClient.serviceClientConfiguration().region())
                             .credentialsProvider(
-                                    s3Client.serviceClientConfiguration().credentialsProvider());
+                                    s3AsyncClient
+                                            .serviceClientConfiguration()
+                                            .credentialsProvider());
 
-            if (s3Client.serviceClientConfiguration().endpointOverride().isPresent()) {
+            if (s3AsyncClient.serviceClientConfiguration().endpointOverride().isPresent()) {
                 // endpoint overrides are only used for testing purposes - i.e. where path-style
                 // access is required
                 presignedBuilder.endpointOverride(
-                        s3Client.serviceClientConfiguration().endpointOverride().get());
+                        s3AsyncClient.serviceClientConfiguration().endpointOverride().get());
                 presignedBuilder.serviceConfiguration(
                         S3Configuration.builder().pathStyleAccessEnabled(true).build());
             }
@@ -429,7 +382,7 @@ public class AmazonS3StorageClient implements StorageClient {
             }
 
             return presignedRequest.url().toString();
-        } catch (final AwsServiceException | SdkClientException e) {
+        } catch (final CancellationException | CompletionException e) {
             throw StorageClientException.of(
                     MessageFormat.format(
                             "failed to get signed url for [mappingPath={0}, expiry={1}]",
@@ -446,8 +399,8 @@ public class AmazonS3StorageClient implements StorageClient {
 
     public void createBucket(final String bucketName) throws StorageClientException {
         try {
-            s3Client.createBucket(builder -> builder.bucket(bucketName));
-        } catch (final AwsServiceException | SdkClientException e) {
+            s3AsyncClient.createBucket(builder -> builder.bucket(bucketName)).join();
+        } catch (final CancellationException | CompletionException e) {
             throw StorageClientException.of(
                     MessageFormat.format(
                             "failed to create bucket for [bucketName={0}]", bucketName),
