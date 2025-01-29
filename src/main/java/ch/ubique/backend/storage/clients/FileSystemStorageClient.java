@@ -32,15 +32,21 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@SuppressWarnings({"unused", "ClassCanBeRecord"})
+@SuppressWarnings("unused")
 public class FileSystemStorageClient implements StorageClient {
 
     private static final Logger logger = LoggerFactory.getLogger(FileSystemStorageClient.class);
 
     private final String basePath;
+    private final boolean writeUncompressed;
 
     public FileSystemStorageClient(final String basePath) {
+        this(basePath, false);
+    }
+
+    public FileSystemStorageClient(final String basePath, final boolean writeUncompressed) {
         this.basePath = basePath;
+        this.writeUncompressed = writeUncompressed;
     }
 
     @Override
@@ -67,7 +73,11 @@ public class FileSystemStorageClient implements StorageClient {
         }
         logger.trace("writing output to {} (complete path {})", path, completePath);
         try (final var outputStream = new FileOutputStream(file)) {
-            output.write(outputStream);
+            if (writeUncompressed) {
+                output.uncompressed().write(outputStream);
+            } else {
+                output.write(outputStream);
+            }
         } catch (final IOException e) {
             throw StorageClientException.of(
                     MessageFormat.format("failed to write for [path={0}]", path), e);
