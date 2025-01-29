@@ -16,6 +16,12 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
 import org.testcontainers.images.PullPolicy;
 
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -49,7 +55,21 @@ class StorageClientTest {
         runMinioCompatibleTest(
                 (bucket, endpoint, accessKey, secretKey) -> {
                     final var storageClient =
-                            new AmazonS3StorageClient(bucket, null, endpoint, accessKey, secretKey);
+                            new AmazonS3StorageClient(
+                                    bucket,
+                                    null,
+                                    S3AsyncClient.builder()
+                                            .credentialsProvider(
+                                                    StaticCredentialsProvider.create(
+                                                            AwsBasicCredentials.create(
+                                                                    accessKey, secretKey)))
+                                            .region(Region.EU_CENTRAL_1)
+                                            .multipartEnabled(true)
+                                            .endpointOverride(URI.create(endpoint))
+                                            .forcePathStyle(true)
+                                            .requestChecksumCalculation(
+                                                    RequestChecksumCalculation.WHEN_REQUIRED)
+                                            .build());
                     storageClient.createBucket("test");
                     return storageClient;
                 });

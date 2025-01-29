@@ -35,7 +35,6 @@ import software.amazon.awssdk.transfer.s3.progress.LoggingTransferListener;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
 import java.nio.file.DirectoryNotEmptyException;
 import java.text.MessageFormat;
 import java.time.Duration;
@@ -77,6 +76,7 @@ public class AmazonS3StorageClient implements StorageClient {
                         .credentialsProvider(WebIdentityTokenFileCredentialsProvider.create())
                         .region(Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION)))
                         .multipartEnabled(true)
+                        // TODO: test in deployment if checksums work as expected for gzip uploads
                         .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
                         .build();
         this.tm = S3TransferManager.builder().s3Client(s3AsyncClient).build();
@@ -130,37 +130,13 @@ public class AmazonS3StorageClient implements StorageClient {
         this.tm = S3TransferManager.builder().s3Client(s3AsyncClient).build();
     }
 
-    /**
-     * TODO: (meinen) replace with constructor accepting built s3client
-     *
-     * <p>Constructor only used for testing purposes.
-     *
-     * @param bucket The bucket name
-     * @param region The region of the S3 service. If null, the default region eu-central-1 is used
-     * @param endpoint The endpoint URL of the S3 service. If null, the default region eu-central-1
-     *     is used to create an S3 endpoint.
-     * @param accessKey The AWS auth access key
-     * @param secretKey The AWS auth secret key
-     */
-    protected AmazonS3StorageClient(
+    public AmazonS3StorageClient(
             final String bucket,
-            @Nullable final String region,
-            final String endpoint,
-            final String accessKey,
-            final String secretKey) {
+            @Nullable final OutputMetaDataProvider outputMetaDataProvider,
+            final S3AsyncClient s3AsyncClient) {
         this.bucket = bucket;
-        this.outputMetaDataProvider = null;
-        this.s3AsyncClient =
-                S3AsyncClient.builder()
-                        .credentialsProvider(
-                                StaticCredentialsProvider.create(
-                                        AwsBasicCredentials.create(accessKey, secretKey)))
-                        .region(Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION)))
-                        .multipartEnabled(true)
-                        .endpointOverride(URI.create(endpoint))
-                        .forcePathStyle(true)
-                        .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
-                        .build();
+        this.outputMetaDataProvider = outputMetaDataProvider;
+        this.s3AsyncClient = s3AsyncClient;
         this.tm = S3TransferManager.builder().s3Client(s3AsyncClient).build();
     }
 
@@ -347,6 +323,7 @@ public class AmazonS3StorageClient implements StorageClient {
 
     @Override
     public boolean exists(final @NotNull String path) throws StorageClientException {
+        /* NOTE: implemented using listObjects instead of headObject method as this method can also be used to check for the existence of sub-paths (i.e. 'directories') */
         return !list(path, false).isEmpty();
     }
 
