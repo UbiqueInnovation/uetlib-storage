@@ -113,7 +113,7 @@ public class AmazonS3StorageClient implements StorageClient {
      * @param region The region of the S3 service. If null, the default region eu-central-1 is used
      * @param accessKey The AWS auth access key
      * @param secretKey The AWS auth secret key
-     * @param timeout Timeout for requests (ignored for AWS S3)
+     * @param timeout Timeout for requests
      * @param outputMetaDataProvider Provider for output meta data
      */
     public AmazonS3StorageClient(
