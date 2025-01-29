@@ -206,7 +206,6 @@ public class AmazonS3StorageClient implements StorageClient {
             // Wait for the upload to finish - exceptions aren't thrown until 'join' is called
             upload.completionFuture().join();
         } catch (final CancellationException | CompletionException | IOException e) {
-            // TODO: (meinen) handle exceptions properly
             throw StorageClientException.of(
                     MessageFormat.format(
                             "failed to write for [path={0}, outputMetaData={1}, output={2}]",
