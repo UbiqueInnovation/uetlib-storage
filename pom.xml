@@ -37,6 +37,10 @@
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>s3</artifactId>
         </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3-transfer-manager</artifactId>
+        </dependency>
 
         <!-- Reflections -->
         <dependency>
@@ -79,7 +83,7 @@
             <dependency>
                 <groupId>software.amazon.awssdk</groupId>
                 <artifactId>bom</artifactId>
-                <version>2.29.50</version>
+                <version>2.30.6</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
