@@ -182,7 +182,7 @@ public class AzureBlobStorageClient implements StorageClient {
     @Override
     public boolean delete(final @NotNull String path, final boolean recursive)
             throws StorageClientException {
-        if (blobExists(path) && !recursive) {
+        if (!recursive && blobExists(path)) {
             return blobContainerClient.getBlobClient(path).deleteIfExists();
         }
         final var existing = list(path, true);
