@@ -257,7 +257,7 @@ public class AmazonS3StorageClient implements StorageClient {
 
         final var existing = list(path, true);
 
-        if (existing.stream().anyMatch(object -> !object.equals(path)) && !recursive) {
+        if (!recursive && existing.stream().anyMatch(object -> !object.equals(path))) {
             throw StorageClientException.of(
                     MessageFormat.format("can not delete not empty directory. [path={0}]", path),
                     new DirectoryNotEmptyException(path));
