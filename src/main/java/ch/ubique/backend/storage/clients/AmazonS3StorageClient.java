@@ -30,6 +30,7 @@ import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.awssdk.transfer.s3.model.DownloadRequest;
 import software.amazon.awssdk.transfer.s3.progress.LoggingTransferListener;
 
 import java.io.IOException;
@@ -250,18 +251,21 @@ public class AmazonS3StorageClient implements StorageClient {
     public final InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
             throws StorageClientException {
         try {
-            final var request = GetObjectRequest.builder().bucket(bucket).key(path).build();
-            final var response =
-                    s3AsyncClient
-                            .getObject(request, AsyncResponseTransformer.toBlockingInputStream())
-                            .join();
+            final var downloadRequest =
+                    DownloadRequest.builder()
+                            .getObjectRequest(
+                                    getObjectRequestBuilder ->
+                                            getObjectRequestBuilder.bucket(bucket).key(path))
+                            .responseTransformer(AsyncResponseTransformer.toBlockingInputStream())
+                            .build();
+            final var download = tm.download(downloadRequest).completionFuture().join().result();
 
             if (doUncompressIfNeeded) {
-                final var contentEncoding = response.response().contentEncoding();
-                return CompressionUtils.tryToUncompress(response, contentEncoding, path);
+                final var contentEncoding = download.response().contentEncoding();
+                return CompressionUtils.tryToUncompress(download, contentEncoding, path);
             }
 
-            return response;
+            return download;
         } catch (final CancellationException | CompletionException | IOException e) {
             throw StorageClientException.of(
                     MessageFormat.format(
