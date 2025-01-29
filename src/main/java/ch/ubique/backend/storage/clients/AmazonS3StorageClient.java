@@ -264,11 +264,7 @@ public class AmazonS3StorageClient implements StorageClient {
         }
 
         final var objectsToDelete =
-                recursive
-                        ? existing.stream()
-                                .map(key -> ObjectIdentifier.builder().key(key).build())
-                                .toList()
-                        : List.of(ObjectIdentifier.builder().key(path).build());
+                existing.stream().map(key -> ObjectIdentifier.builder().key(key).build()).toList();
 
         final var errors = new ArrayList<S3Error>();
         for (var chunkIdx = 0; chunkIdx < objectsToDelete.size(); chunkIdx += 1000) {

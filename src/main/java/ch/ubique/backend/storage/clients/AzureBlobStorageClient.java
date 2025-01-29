@@ -186,7 +186,7 @@ public class AzureBlobStorageClient implements StorageClient {
             return blobContainerClient.getBlobClient(path).deleteIfExists();
         }
         final var existing = list(path, true);
-        if (existing.stream().anyMatch(object -> !object.equals(path)) && !recursive) {
+        if (!recursive && existing.stream().anyMatch(object -> !object.equals(path))) {
             throw StorageClientException.of(
                     MessageFormat.format(
                             "can not delete non empty directory [path={0}, recursive=false]", path),
