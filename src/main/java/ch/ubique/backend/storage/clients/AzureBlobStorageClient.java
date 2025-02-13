@@ -182,23 +182,39 @@ public class AzureBlobStorageClient implements StorageClient {
     @Override
     public boolean delete(final @NotNull String path, final boolean recursive)
             throws StorageClientException {
-        if (!recursive && blobExists(path)) {
+        if (recursive) {
+            return deleteRecursive(path);
+        }
+        return deleteNonRecursive(path);
+    }
+
+    private boolean deleteNonRecursive(final String path) throws StorageClientException {
+        if (blobExists(path)) {
             return blobContainerClient.getBlobClient(path).deleteIfExists();
         }
+
+        // If we arrive here, a single blob matching the path exactly does not exist:
+        // - If there are some files that match the path, we throw
+        // - Otherwise we return false, meaning nothing was deleted
         final var existing = list(path, true);
-        if (!recursive && existing.stream().anyMatch(object -> !object.equals(path))) {
+        if (!existing.isEmpty()) {
             throw StorageClientException.of(
                     MessageFormat.format(
                             "can not delete non empty directory [path={0}, recursive=false]", path),
                     new DirectoryNotEmptyException(path));
         }
 
-        if (recursive) {
-            for (final var object : existing) {
-                delete(object);
-            }
+        return false;
+    }
+
+    private boolean deleteRecursive(final String path) throws StorageClientException {
+        final var existing = list(path, true);
+        var deletedAny = false;
+        for (final var pathToDelete : existing) {
+            final var deleted = blobContainerClient.getBlobClient(pathToDelete).deleteIfExists();
+            deletedAny = deletedAny || deleted;
         }
-        return blobContainerClient.getBlobClient(path).deleteIfExists();
+        return deletedAny;
     }
 
     @Override
@@ -220,7 +236,7 @@ public class AzureBlobStorageClient implements StorageClient {
         return blobExists(path) || !list(path, false).isEmpty();
     }
 
-    private boolean blobExists(String path) {
+    private boolean blobExists(final String path) {
         return blobContainerClient.getBlobClient(path).exists();
     }
 
