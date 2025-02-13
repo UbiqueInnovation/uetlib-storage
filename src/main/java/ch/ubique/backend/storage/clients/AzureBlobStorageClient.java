@@ -200,7 +200,7 @@ public class AzureBlobStorageClient implements StorageClient {
         if (!existing.isEmpty()) {
             throw StorageClientException.of(
                     MessageFormat.format(
-                            "can not delete non empty directory [path={0}, recursive=false]", path),
+                            "cannot delete non-empty directory. [path={0}, recursive=false]", path),
                     new DirectoryNotEmptyException(path));
         }
 

@@ -5,13 +5,14 @@ import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
-
 import ch.ubique.backend.storage.utils.CompressionUtils;
+
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
+import org.apache.commons.io.filefilter.PrefixFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -23,6 +24,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.MessageFormat;
@@ -99,7 +101,7 @@ public class FileSystemStorageClient implements StorageClient {
             throws StorageClientException {
         final var completePath = getCompletePath(path);
         final var file = new File(completePath.toUri());
-        logger.debug("reading input from {} (complete path {})", path, completePath);
+        logger.trace("reading input from {} (complete path {})", path, completePath);
 
         try {
             final var fileInputStream = new FileInputStream(file);
@@ -118,11 +120,22 @@ public class FileSystemStorageClient implements StorageClient {
     @Override
     public boolean delete(final @NotNull String path, final boolean recursive)
             throws StorageClientException {
+
+        final var existing = list(path, true);
+
+        if (!recursive && existing.stream().anyMatch(object -> !object.equals(path))) {
+            throw StorageClientException.of(
+                    MessageFormat.format(
+                            "cannot delete non-empty directory. [path={0}, recursive=false]", path),
+                    new DirectoryNotEmptyException(path));
+        }
+
         final var completePath = getCompletePath(path);
-        logger.debug("deleting from {} (complete path {})", path, completePath);
+        logger.trace("deleting from {} (complete path {})", path, completePath);
         if (recursive) {
             return FileUtils.deleteQuietly(completePath.toFile());
         }
+
         try {
             return Files.deleteIfExists(completePath);
         } catch (final IOException e) {
@@ -136,14 +149,27 @@ public class FileSystemStorageClient implements StorageClient {
     public Collection<String> list(@NotNull final String path, final boolean recursive)
             throws StorageClientException {
         final var completePath = getCompletePath(path);
-        logger.debug("listing files from {} (complete path {})", path, completePath);
+        logger.trace("listing files from {} (complete path {})", path, completePath);
         if (recursive) {
             final var files =
                     FileUtils.listFiles(
                             completePath.toFile(),
-                            TrueFileFilter.INSTANCE,
+                            TrueFileFilter.TRUE,
                             DirectoryFileFilter.DIRECTORY);
-            return mapToRelativePaths(files.stream());
+            final var prefixMatches = listFilesWithPrefix(completePath);
+            return mapToRelativePaths(Stream.concat(files.stream(), prefixMatches.stream()));
+        }
+
+        // return just the directory with trailing slash if it is a directory but not the base of
+        // the storage
+        if (!"".equals(path) && !path.endsWith("/") && completePath.toFile().isDirectory()) {
+            return Set.of(path + "/");
+        }
+
+        // also match files on prefixes in the directories
+        final var prefixMatches = listFilesWithPrefix(completePath);
+        if (!prefixMatches.isEmpty()) {
+            return mapToRelativePaths(prefixMatches.stream());
         }
 
         if (!exists(path)) {
@@ -164,8 +190,20 @@ public class FileSystemStorageClient implements StorageClient {
     @Override
     public boolean exists(final @NotNull String path) {
         final var completePath = getCompletePath(path);
-        logger.debug("checking file existing at {} (complete path {})", path, completePath);
-        return Files.exists(completePath.toFile().toPath());
+        logger.trace("checking file existing at {} (complete path {})", path, completePath);
+
+        if (completePath.toFile().isDirectory()) {
+            return completePath.toFile().exists();
+        }
+
+        final var prefixMatches = listFilesWithPrefix(completePath);
+        return !prefixMatches.isEmpty();
+    }
+
+    private static Collection<File> listFilesWithPrefix(final Path completePath) {
+        final var directory = completePath.getParent();
+        final var prefix = completePath.getFileName().toString();
+        return FileUtils.listFiles(directory.toFile(), new PrefixFileFilter(prefix), null);
     }
 
     private Set<String> mapToRelativePaths(final Stream<File> stream) {
