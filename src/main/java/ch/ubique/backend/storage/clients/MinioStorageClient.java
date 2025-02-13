@@ -230,7 +230,7 @@ public class MinioStorageClient implements StorageClient {
 
         if (!recursive && existing.stream().anyMatch(object -> !object.equals(path))) {
             throw storageClientException(
-                    MessageFormat.format("can not delete not empty directory. [path={0}]", path),
+                    MessageFormat.format("cannot delete non-empty directory. [path={0}, recursive=false]", path),
                     new DirectoryNotEmptyException(path));
         }
 

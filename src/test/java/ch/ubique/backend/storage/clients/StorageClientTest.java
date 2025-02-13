@@ -1,9 +1,12 @@
 package ch.ubique.backend.storage.clients;
 
+import static ch.ubique.backend.test.assertion.AssertionUtils.assertThrowsWithMessage;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.storage.exception.NonRetryableStorageClientException;
 import ch.ubique.backend.storage.output.ByteOutput;
 
 import jakarta.validation.constraints.NotNull;
@@ -188,6 +191,9 @@ class StorageClientTest {
         assertEquals(Set.of("foo", "bar/"), storageClient.list());
         assertEquals(Set.of("foo", "bar/foo1", "bar/foo2"), storageClient.list(true));
         assertEquals(Set.of("bar/foo1", "bar/foo2"), storageClient.list("bar", true));
+        assertEquals(Set.of("bar/foo1", "bar/foo2"), storageClient.list("bar/", true));
+        assertEquals(Set.of("bar/"), storageClient.list("bar"));
+        assertEquals(Set.of("bar/foo1", "bar/foo2"), storageClient.list("bar/"));
 
         assertDoesNotThrow(() -> storageClient.delete("bar/nonExisting"));
         assertDoesNotThrow(() -> storageClient.delete("nonExisting/bar"));
@@ -239,6 +245,15 @@ class StorageClientTest {
                     new ByteOutput("Hello World".getBytes(StandardCharsets.UTF_8)), path);
             assertEquals("Hello World", readStringAndClose(storageClient.read(path)));
         }
+
+        assertTrue(storageClient.exists("foo/uncompressed"));
+        assertEquals(
+                Set.of("foo/uncompressed.gz", "foo/uncompressed.bz"),
+                storageClient.list("foo/uncompressed"));
+        assertThrowsWithMessage(
+                NonRetryableStorageClientException.class,
+                () -> storageClient.delete("foo/uncompressed"),
+                "cannot delete non-empty directory. [path=foo/uncompressed, recursive=false]");
 
         assertDoesNotThrow(() -> storageClient.delete("foo", true));
         assertTrue(storageClient.list().isEmpty());
