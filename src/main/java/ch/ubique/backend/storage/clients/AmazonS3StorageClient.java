@@ -2,6 +2,7 @@ package ch.ubique.backend.storage.clients;
 
 import ch.ubique.backend.core.executor.VirtualThreadUtils;
 import ch.ubique.backend.core.http.header.HttpHeader;
+import ch.ubique.backend.core.utils.StreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
@@ -279,29 +280,30 @@ public class AmazonS3StorageClient implements StorageClient {
         final var objectsToDelete =
                 existing.stream().map(key -> ObjectIdentifier.builder().key(key).build()).toList();
 
-        final var errors = new ArrayList<S3Error>();
-        for (var chunkIdx = 0; chunkIdx < objectsToDelete.size(); chunkIdx += 1000) {
-            // delete doesn't accept more than 1000 objects at once
-            final var chunkEnd = Math.min(chunkIdx + 1000, objectsToDelete.size());
-            final var chunk = objectsToDelete.subList(chunkIdx, chunkEnd);
-            final var deleteObjectsResponse =
-                    s3AsyncClient
-                            .deleteObjects(
-                                    builder ->
-                                            builder.bucket(bucket)
-                                                    .delete(
-                                                            deleteBuilder ->
-                                                                    deleteBuilder.objects(chunk)))
-                            .join();
-            errors.addAll(deleteObjectsResponse.errors());
+        final var errors =
+                StreamUtils.chunked(objectsToDelete, 1000)
+                        .flatMap(
+                                chunk ->
+                                        s3AsyncClient
+                                                .deleteObjects(
+                                                        builder ->
+                                                                builder.bucket(bucket)
+                                                                        .delete(
+                                                                                deleteBuilder ->
+                                                                                        deleteBuilder
+                                                                                                .objects(
+                                                                                                        chunk)))
+                                                .join()
+                                                .errors()
+                                                .stream())
+                        .toList();
+
+        if (errors.isEmpty()) {
+            return true;
         }
 
-        if (!errors.isEmpty()) {
-            throw StorageClientException.of(
-                    "Failed to delete object(s) from S3", new S3StorageClientException(errors));
-        }
-
-        return true;
+        throw StorageClientException.of(
+                "Failed to delete object(s) from S3", new S3StorageClientException(errors));
     }
 
     @Override
