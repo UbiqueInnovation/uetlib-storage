@@ -215,10 +215,10 @@ class StorageImplementationTest {
         assertFalse(testStorage.existsFile("5"));
         verify(storageClient).exists("storage/files/5.png");
 
-        assertTrue(testStorage.existsFolder(5));
+        assertTrue(testStorage.existsFilePrefix(5));
         verify(storageClient).exists("storage/files/5");
 
-        assertFalse(testStorage.existsFolder(2));
+        assertTrue(testStorage.existsFilePrefix(2));
         verify(storageClient).exists("storage/files/2");
     }
 
