@@ -6,6 +6,8 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class StorageInvocationHandler implements InvocationHandler {
 
@@ -29,11 +31,15 @@ public class StorageInvocationHandler implements InvocationHandler {
             case "hashCode" -> hashCode();
             case "toString" -> toString();
             default -> {
-                logger.debug(
-                        "invoking call to method {} to {} with args {}",
+                logger.trace(
+                        "invoking call to method {} to {} with {} args ({})",
                         method.getName(),
                         dispatch.get(method),
-                        args);
+                        args.length,
+                        Stream.of(args)
+                                .map(Object::getClass)
+                                .map(Class::getCanonicalName)
+                                .collect(Collectors.joining(", ")));
                 yield dispatch.get(method).invoke(storageMappingInvocationProperties, method, args);
             }
         };
