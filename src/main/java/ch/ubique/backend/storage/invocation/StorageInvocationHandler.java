@@ -1,11 +1,14 @@
 package ch.ubique.backend.storage.invocation;
 
+import jakarta.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -24,10 +27,10 @@ public class StorageInvocationHandler implements InvocationHandler {
     }
 
     @Override
-    public Object invoke(final Object proxy, final Method method, final Object[] args)
+    public Object invoke(final Object proxy, final Method method, @Nullable final Object[] args)
             throws Throwable {
         return switch (method.getName()) {
-            case "equals" -> equals(args[0]);
+            case "equals" -> args != null && equals(args[0]);
             case "hashCode" -> hashCode();
             case "toString" -> toString();
             default -> {
@@ -35,10 +38,15 @@ public class StorageInvocationHandler implements InvocationHandler {
                         "invoking call to method {} to {} with {} args ({})",
                         method.getName(),
                         dispatch.get(method),
-                        args.length,
-                        Stream.of(args)
-                                .map(Object::getClass)
-                                .map(Class::getCanonicalName)
+                        args == null ? null : args.length,
+                        Optional.ofNullable(args).stream()
+                                .flatMap(Stream::of)
+                                .map(
+                                        o ->
+                                                Optional.ofNullable(o)
+                                                        .map(Object::getClass)
+                                                        .map(Class::getCanonicalName)
+                                                        .orElse("null"))
                                 .collect(Collectors.joining(", ")));
                 yield dispatch.get(method).invoke(storageMappingInvocationProperties, method, args);
             }
