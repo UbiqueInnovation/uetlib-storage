@@ -17,6 +17,8 @@ import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
 
 import io.minio.*;
+import io.minio.credentials.Provider;
+import io.minio.credentials.StaticProvider;
 import io.minio.errors.ErrorResponseException;
 import io.minio.errors.InsufficientDataException;
 import io.minio.errors.InternalException;
@@ -48,7 +50,7 @@ import java.util.*;
  * {@link StorageClient} to perform bucket and object operations to any Amazon S3 / MinIO compatible
  * object storage service.
  */
-public sealed class MinioStorageClient implements StorageClient permits AmazonS3StorageClient {
+public class MinioStorageClient implements StorageClient {
 
     private final String bucket;
     private final MinioClient minioClient;
@@ -57,8 +59,7 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
     public MinioStorageClient(
             final String bucket,
             final String endpoint,
-            final String accessKey,
-            final String secretKey,
+            final Provider credentialsProvider,
             @Nullable final Duration timeout,
             @Nullable final OutputMetaDataProvider outputMetaDataProvider) {
         this.bucket = bucket;
@@ -74,9 +75,24 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
         minioClient =
                 MinioClient.builder()
                         .endpoint(endpoint)
-                        .credentials(accessKey, secretKey)
+                        .credentialsProvider(credentialsProvider)
                         .httpClient(httpClient)
                         .build();
+    }
+
+    public MinioStorageClient(
+            final String bucket,
+            final String endpoint,
+            final String accessKey,
+            final String secretKey,
+            @Nullable final Duration timeout,
+            @Nullable final OutputMetaDataProvider outputMetaDataProvider) {
+        this(
+                bucket,
+                endpoint,
+                new StaticProvider(accessKey, secretKey, null),
+                timeout,
+                outputMetaDataProvider);
     }
 
     @NotNull
@@ -212,9 +228,9 @@ public sealed class MinioStorageClient implements StorageClient permits AmazonS3
 
         final var existing = list(path, true);
 
-        if (existing.stream().anyMatch(object -> !object.equals(path)) && !recursive) {
+        if (!recursive && existing.stream().anyMatch(object -> !object.equals(path))) {
             throw storageClientException(
-                    MessageFormat.format("can not delete not empty directory. [path={0}]", path),
+                    MessageFormat.format("cannot delete non-empty directory. [path={0}, recursive=false]", path),
                     new DirectoryNotEmptyException(path));
         }
 
