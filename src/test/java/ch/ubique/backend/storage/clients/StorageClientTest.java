@@ -1,9 +1,12 @@
 package ch.ubique.backend.storage.clients;
 
+import static ch.ubique.backend.test.assertion.AssertionUtils.assertThrowsWithMessage;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.storage.exception.NonRetryableStorageClientException;
 import ch.ubique.backend.storage.output.ByteOutput;
 
 import jakarta.validation.constraints.NotNull;
@@ -15,6 +18,12 @@ import org.testcontainers.Testcontainers;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
 import org.testcontainers.images.PullPolicy;
+
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,7 +54,43 @@ class StorageClientTest {
     }
 
     @Test
+    void testS3StorageClient() throws IOException {
+        runMinioCompatibleTest(
+                (bucket, endpoint, accessKey, secretKey) -> {
+                    final var storageClient =
+                            new AmazonS3StorageClient(
+                                    bucket,
+                                    null,
+                                    S3AsyncClient.builder()
+                                            .credentialsProvider(
+                                                    StaticCredentialsProvider.create(
+                                                            AwsBasicCredentials.create(
+                                                                    accessKey, secretKey)))
+                                            .region(Region.EU_CENTRAL_1)
+                                            .multipartEnabled(true)
+                                            .endpointOverride(URI.create(endpoint))
+                                            .forcePathStyle(true)
+                                            .requestChecksumCalculation(
+                                                    RequestChecksumCalculation.WHEN_REQUIRED)
+                                            .build());
+                    storageClient.createBucket("test");
+                    return storageClient;
+                });
+    }
+
+    @Test
     void testMinioStorageClient() throws IOException {
+        runMinioCompatibleTest(
+                (bucket, endpoint, accessKey, secretKey) -> {
+                    final var storageClient =
+                            new MinioStorageClient(
+                                    bucket, endpoint, accessKey, secretKey, null, null);
+                    storageClient.createBucket(bucket);
+                    return storageClient;
+                });
+    }
+
+    void runMinioCompatibleTest(final MinioStorageClientProducer producer) throws IOException {
         try (final var minioServer =
                 new GenericContainer<>("minio/minio")
                         .withImagePullPolicy(PullPolicy.ageBased(Duration.ofDays(30)))) {
@@ -66,10 +111,7 @@ class StorageClientTest {
             final var minioServerUrl =
                     String.format("http://%s:%s", minioServer.getHost(), mappedPort);
 
-            final var storageClient =
-                    new MinioStorageClient("test", minioServerUrl, "test", "test1234", null, null);
-
-            storageClient.createBucket("test");
+            final var storageClient = producer.create("test", minioServerUrl, "test", "test1234");
 
             test(storageClient);
 
@@ -149,6 +191,9 @@ class StorageClientTest {
         assertEquals(Set.of("foo", "bar/"), storageClient.list());
         assertEquals(Set.of("foo", "bar/foo1", "bar/foo2"), storageClient.list(true));
         assertEquals(Set.of("bar/foo1", "bar/foo2"), storageClient.list("bar", true));
+        assertEquals(Set.of("bar/foo1", "bar/foo2"), storageClient.list("bar/", true));
+        assertEquals(Set.of("bar/"), storageClient.list("bar"));
+        assertEquals(Set.of("bar/foo1", "bar/foo2"), storageClient.list("bar/"));
 
         assertDoesNotThrow(() -> storageClient.delete("bar/nonExisting"));
         assertDoesNotThrow(() -> storageClient.delete("nonExisting/bar"));
@@ -200,6 +245,15 @@ class StorageClientTest {
                     new ByteOutput("Hello World".getBytes(StandardCharsets.UTF_8)), path);
             assertEquals("Hello World", readStringAndClose(storageClient.read(path)));
         }
+
+        assertTrue(storageClient.exists("foo/uncompressed"));
+        assertEquals(
+                Set.of("foo/uncompressed.gz", "foo/uncompressed.bz"),
+                storageClient.list("foo/uncompressed"));
+        assertThrowsWithMessage(
+                NonRetryableStorageClientException.class,
+                () -> storageClient.delete("foo/uncompressed"),
+                "cannot delete non-empty directory. [path=foo/uncompressed, recursive=false]");
 
         assertDoesNotThrow(() -> storageClient.delete("foo", true));
         assertTrue(storageClient.list().isEmpty());

@@ -217,6 +217,10 @@ public final class OutputMetaData {
                 .or(() -> Optional.ofNullable(accessPolicy).map(CannedAcl::toString));
     }
 
+    public Optional<Instant> expiresAsInstant() {
+        return Optional.ofNullable(expires);
+    }
+
     public Optional<String> expires() {
         return Optional.ofNullable(expires)
                 .map(instant -> RFC_1123_DATE_TIME.format(instant.atZone(ZONE_ID_UTC)));
