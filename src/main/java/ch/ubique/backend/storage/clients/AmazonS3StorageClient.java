@@ -8,6 +8,8 @@ import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.exception.S3StorageClientException;
 import ch.ubique.backend.storage.exception.StorageClientException;
+import ch.ubique.backend.storage.output.ByteOutput;
+import ch.ubique.backend.storage.output.FileOutput;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
@@ -183,13 +185,7 @@ public class AmazonS3StorageClient implements StorageClient {
                     tm.upload(
                             uploadRequestBuilder ->
                                     uploadRequestBuilder
-                                            .requestBody(
-                                                    AsyncRequestBody.fromInputStream(
-                                                            inputStream,
-                                                            output.contentLength() < 0L
-                                                                    ? null
-                                                                    : output.contentLength(),
-                                                            taskExecutor))
+                                            .requestBody(createRequestBody(output, inputStream))
                                             .addTransferListener(LoggingTransferListener.create())
                                             .putObjectRequest(
                                                     req ->
@@ -213,6 +209,19 @@ public class AmazonS3StorageClient implements StorageClient {
                             path, outputMetaData, output),
                     e);
         }
+    }
+
+    private AsyncRequestBody createRequestBody(final Output output, final InputStream inputStream) {
+        if (output instanceof final FileOutput fileOutput) {
+            return AsyncRequestBody.fromFile(fileOutput.file());
+        }
+        if (output instanceof final ByteOutput byteOutput) {
+            return AsyncRequestBody.fromBytes(byteOutput.value());
+        }
+        return AsyncRequestBody.fromInputStream(
+                inputStream,
+                output.contentLength() < 0L ? null : output.contentLength(),
+                taskExecutor);
     }
 
     private Map<String, String> createUserMetadata(final OutputMetaData outputMetaData) {
@@ -357,11 +366,12 @@ public class AmazonS3StorageClient implements StorageClient {
                                             .serviceClientConfiguration()
                                             .credentialsProvider());
 
-            if (s3AsyncClient.serviceClientConfiguration().endpointOverride().isPresent()) {
+            final var endpointOverride =
+                    s3AsyncClient.serviceClientConfiguration().endpointOverride();
+            if (endpointOverride.isPresent()) {
                 // endpoint overrides are only used for testing purposes - i.e. where path-style
                 // access is required
-                presignedBuilder.endpointOverride(
-                        s3AsyncClient.serviceClientConfiguration().endpointOverride().get());
+                presignedBuilder.endpointOverride(endpointOverride.get());
                 presignedBuilder.serviceConfiguration(
                         S3Configuration.builder().pathStyleAccessEnabled(true).build());
             }
