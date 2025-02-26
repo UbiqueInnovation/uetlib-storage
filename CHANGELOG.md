@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.1.3
+
+- Handle files and byte payloads explicitly for the AmazonS3StorageClient. This ensures the AWS
+  internal retry mechanism works properly.
+
 ## 1.0.4
 
 - Made gzip writing and reading more consistent between different storage clients
