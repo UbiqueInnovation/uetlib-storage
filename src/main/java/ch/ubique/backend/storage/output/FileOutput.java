@@ -30,6 +30,10 @@ public final class FileOutput implements Output {
         this.contentType = StringUtils.requireNonBlankElse(contentType, "application/octet-stream");
     }
 
+    public File file() {
+        return file;
+    }
+
     @Override
     public void write(final OutputStream outputStream) throws IOException {
         FileUtils.copyFile(file, outputStream);

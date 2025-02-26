@@ -9,15 +9,9 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
-public final class JsonOutput<T> implements Output {
+public final class JsonOutput<T> extends ByteOutput implements Output {
 
     private final T value;
-    private final byte[] byteValue;
     private final ObjectMapper objectMapper;
 
     public JsonOutput(final T value) {
@@ -25,38 +19,9 @@ public final class JsonOutput<T> implements Output {
     }
 
     public JsonOutput(final T value, final ObjectMapper objectMapper) {
+        super(encode(value, objectMapper), "application/json");
         this.value = value;
-        try {
-            this.byteValue = objectMapper.writeValueAsBytes(value);
-        } catch (final JsonProcessingException e) {
-            throw new WrappedException(e);
-        }
         this.objectMapper = objectMapper;
-    }
-
-    @Override
-    public void write(final OutputStream outputStream) throws IOException {
-        outputStream.write(byteValue);
-    }
-
-    @Override
-    public InputStream read() throws IOException {
-        return new ByteArrayInputStream(byteValue);
-    }
-
-    @Override
-    public String contentType() {
-        return "application/json";
-    }
-
-    @Override
-    public long uncompressedContentLength() {
-        return byteValue.length;
-    }
-
-    @Override
-    public boolean canBeRetried() {
-        return true;
     }
 
     @Override
@@ -84,5 +49,13 @@ public final class JsonOutput<T> implements Output {
     @Override
     public int hashCode() {
         return new HashCodeBuilder(17, 37).append(value).append(objectMapper).toHashCode();
+    }
+
+    private static byte[] encode(final Object value, final ObjectMapper objectMapper) {
+        try {
+            return objectMapper.writeValueAsBytes(value);
+        } catch (final JsonProcessingException e) {
+            throw new WrappedException(e);
+        }
     }
 }

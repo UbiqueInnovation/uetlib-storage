@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-public final class ByteOutput implements Output {
+public sealed class ByteOutput implements Output permits JsonOutput {
 
     private final byte[] value;
     private final String contentType;
@@ -33,18 +33,22 @@ public final class ByteOutput implements Output {
         this.contentType = StringUtils.requireNonBlankElse(contentType, "application/octet-stream");
     }
 
+    public final byte[] value() {
+        return value;
+    }
+
     @Override
-    public void write(final OutputStream outputStream) throws IOException {
+    public final void write(final OutputStream outputStream) throws IOException {
         outputStream.write(value);
     }
 
     @Override
-    public InputStream read() throws IOException {
+    public final InputStream read() throws IOException {
         return new ByteArrayInputStream(value);
     }
 
     @Override
-    public String contentType() {
+    public final String contentType() {
         return contentType;
     }
 
@@ -78,12 +82,12 @@ public final class ByteOutput implements Output {
     }
 
     @Override
-    public long uncompressedContentLength() {
+    public final long uncompressedContentLength() {
         return value.length;
     }
 
     @Override
-    public boolean canBeRetried() {
+    public final boolean canBeRetried() {
         return true;
     }
 }
