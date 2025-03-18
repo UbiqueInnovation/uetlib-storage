@@ -35,7 +35,6 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.DownloadRequest;
-import software.amazon.awssdk.transfer.s3.progress.LoggingTransferListener;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -186,7 +185,6 @@ public class AmazonS3StorageClient implements StorageClient {
                             uploadRequestBuilder ->
                                     uploadRequestBuilder
                                             .requestBody(createRequestBody(output, inputStream))
-                                            .addTransferListener(LoggingTransferListener.create())
                                             .putObjectRequest(
                                                     req ->
                                                             req.bucket(bucket)
