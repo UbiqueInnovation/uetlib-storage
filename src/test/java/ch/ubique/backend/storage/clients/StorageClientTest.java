@@ -194,6 +194,18 @@ class StorageClientTest {
 
         assertDoesNotThrow(() -> storageClient.delete("foo", true));
         assertTrue(storageClient.list().isEmpty());
+
+        // Test deletion of a nested object
+        final var nestedPath = "foo/bar/baz/qux.txt";
+        storageClient.write(new ByteOutput(new byte[0]), nestedPath);
+        assertThatCollection(storageClient.list(true))
+                .containsExactlyElementsOf(Set.of(nestedPath));
+        assertDoesNotThrow(() -> storageClient.delete(nestedPath, true));
+        assertThatCollection(storageClient.list(true)).isEmpty();
+        assertThatCollection(storageClient.list()).isEmpty();
+
+        // Cleanup for the next run
+        assertDoesNotThrow(() -> storageClient.delete("", true));
     }
 
     static Collection<StorageClient> createStorageClients() throws IOException {

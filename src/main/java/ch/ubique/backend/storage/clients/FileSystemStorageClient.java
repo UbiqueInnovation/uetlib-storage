@@ -10,6 +10,7 @@ import ch.ubique.backend.storage.utils.CompressionUtils;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
+import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.apache.commons.io.filefilter.PrefixFileFilter;
@@ -32,8 +33,6 @@ import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.time.OffsetDateTime;
 import java.util.Collection;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @SuppressWarnings("unused")
@@ -152,41 +151,26 @@ public class FileSystemStorageClient implements StorageClient {
             throws StorageClientException {
         final var completePath = getCompletePath(path);
         logger.trace("listing files from {} (complete path {})", path, completePath);
-        if (recursive) {
-            final var files =
-                    FileUtils.listFiles(
-                            completePath.toFile(),
-                            TrueFileFilter.TRUE,
-                            DirectoryFileFilter.DIRECTORY);
-            final var prefixMatches = listFilesWithPrefix(completePath);
-            return mapToRelativePaths(Stream.concat(files.stream(), prefixMatches.stream()));
-        }
-
-        // return just the directory with trailing slash if it is a directory but not the base of
-        // the storage
-        if (!"".equals(path) && !path.endsWith("/") && completePath.toFile().isDirectory()) {
-            return Set.of(path + "/");
-        }
-
-        // also match files on prefixes in the directories
+        final var files =
+                FileUtils.listFiles(
+                        completePath.toFile(), TrueFileFilter.TRUE, DirectoryFileFilter.DIRECTORY);
         final var prefixMatches = listFilesWithPrefix(completePath);
-        if (!prefixMatches.isEmpty()) {
-            return mapToRelativePaths(prefixMatches.stream());
+        final var matches = Stream.concat(files.stream(), prefixMatches.stream());
+        final var relativePaths = mapToRelativePaths(matches);
+        if (!recursive) {
+            return relativePaths
+                    .map(p -> nonRecursiveMatch(path, p))
+                    .collect(Collectors.toUnmodifiableSet());
         }
+        return relativePaths.collect(Collectors.toUnmodifiableSet());
+    }
 
-        if (!exists(path)) {
-            return Set.of();
+    private static String nonRecursiveMatch(final String queryPath, final String relativePath) {
+        final var subPath = relativePath.substring(queryPath.length());
+        if (!subPath.contains("/")) {
+            return relativePath;
         }
-        if (Files.isRegularFile(completePath)) {
-            return mapToRelativePaths(Stream.of(completePath.toFile()));
-        }
-        try (final var paths = Files.list(completePath)) {
-            return mapToRelativePaths(paths.map(Path::toFile));
-        } catch (final IOException e) {
-            throw StorageClientException.of(
-                    MessageFormat.format("failed to list for [path={0}, recursive=false]", path),
-                    e);
-        }
+        return queryPath + subPath.split("/")[0] + "/";
     }
 
     @Override
@@ -208,11 +192,10 @@ public class FileSystemStorageClient implements StorageClient {
         return FileUtils.listFiles(directory.toFile(), new PrefixFileFilter(prefix), null);
     }
 
-    private Set<String> mapToRelativePaths(final Stream<File> stream) {
+    private Stream<String> mapToRelativePaths(final Stream<File> stream) {
         final var baseUri = Path.of(basePath).toUri();
         return stream.map(file -> baseUri.relativize(file.toURI()).getPath())
-                .filter(StringUtils::isNotBlank)
-                .collect(Collectors.toUnmodifiableSet());
+                .filter(StringUtils::isNotBlank);
     }
 
     @Override
