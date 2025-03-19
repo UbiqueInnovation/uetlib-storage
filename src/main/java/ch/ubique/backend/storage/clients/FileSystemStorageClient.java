@@ -13,6 +13,7 @@ import jakarta.validation.constraints.NotNull;
 import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
+import org.apache.commons.io.filefilter.FalseFileFilter;
 import org.apache.commons.io.filefilter.PrefixFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.lang3.StringUtils;
@@ -121,10 +122,28 @@ public class FileSystemStorageClient implements StorageClient {
     @Override
     public boolean delete(final @NotNull String path, final boolean recursive)
             throws StorageClientException {
+        if (recursive) {
+            return deleteRecursive(path);
+        }
+        return deleteNonRecursive(path);
+    }
 
+    private boolean deleteRecursive(final String path) throws StorageClientException {
+        final var recursive = true;
+        final var existing = list(path, true);
+        var anyDeleted = false;
+        for (final var pathToDelete : existing) {
+            anyDeleted |= FileUtils.deleteQuietly(getCompletePath(pathToDelete).toFile());
+        }
+        deleteEmptyDirectories();
+        return anyDeleted;
+    }
+
+    private boolean deleteNonRecursive(final String path) throws StorageClientException {
+        final var recursive = false;
         final var existing = list(path, true);
 
-        if (!recursive && existing.stream().anyMatch(object -> !object.equals(path))) {
+        if (existing.stream().anyMatch(object -> !object.equals(path))) {
             throw StorageClientException.of(
                     MessageFormat.format(
                             "cannot delete non-empty directory. [path={0}, recursive=false]", path),
@@ -133,16 +152,33 @@ public class FileSystemStorageClient implements StorageClient {
 
         final var completePath = getCompletePath(path);
         logger.trace("deleting from {} (complete path {})", path, completePath);
-        if (recursive) {
-            return FileUtils.deleteQuietly(completePath.toFile());
-        }
 
         try {
-            return Files.deleteIfExists(completePath);
+            final var deleted = Files.deleteIfExists(completePath);
+            deleteEmptyDirectories();
+            return deleted;
         } catch (final IOException e) {
             throw StorageClientException.of(
                     MessageFormat.format("failed to delete for [path={0}, recursive=false]", path),
                     e);
+        }
+    }
+
+    private void deleteEmptyDirectories() {
+        FileUtils.listFilesAndDirs(
+                        Path.of(basePath).toFile(),
+                        FalseFileFilter.FALSE,
+                        DirectoryFileFilter.DIRECTORY)
+                .stream()
+                .filter(this::isEmptyDirectory)
+                .forEach(FileUtils::deleteQuietly);
+    }
+
+    private boolean isEmptyDirectory(final File file) {
+        try {
+            return file.isDirectory() && FileUtils.isEmptyDirectory(file);
+        } catch (final IOException e) {
+            return false;
         }
     }
 
@@ -174,16 +210,8 @@ public class FileSystemStorageClient implements StorageClient {
     }
 
     @Override
-    public boolean exists(final @NotNull String path) {
-        final var completePath = getCompletePath(path);
-        logger.trace("checking file existing at {} (complete path {})", path, completePath);
-
-        if (completePath.toFile().isDirectory()) {
-            return completePath.toFile().exists();
-        }
-
-        final var prefixMatches = listFilesWithPrefix(completePath);
-        return !prefixMatches.isEmpty();
+    public boolean exists(final @NotNull String path) throws StorageClientException {
+        return !list(path, true).isEmpty();
     }
 
     private static Collection<File> listFilesWithPrefix(final Path completePath) {

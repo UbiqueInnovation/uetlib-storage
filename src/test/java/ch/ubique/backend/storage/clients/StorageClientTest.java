@@ -78,6 +78,7 @@ class StorageClientTest {
     void test(final StorageClient storageClient) throws IOException {
 
         assertThatCollection(storageClient.list()).isEmpty();
+        assertThatCollection(storageClient.list(true)).isEmpty();
 
         storageClient.write(new ByteOutput("Hello World".getBytes(StandardCharsets.UTF_8)), "foo");
         assertThatCollection(storageClient.list()).containsExactlyElementsOf(Set.of("foo"));
@@ -192,8 +193,22 @@ class StorageClientTest {
                 () -> storageClient.delete("foo/uncompressed"),
                 "cannot delete non-empty directory. [path=foo/uncompressed, recursive=false]");
 
-        assertDoesNotThrow(() -> storageClient.delete("foo", true));
-        assertTrue(storageClient.list().isEmpty());
+        // Delete by partial path
+        assertThatCollection(storageClient.list(true)).contains("foo/bar-baz.other-extension");
+        assertThrows(
+                NonRetryableStorageClientException.class,
+                () -> storageClient.delete("foo/bar-baz.other", false));
+        assertDoesNotThrow(() -> storageClient.delete("foo/bar-baz.other-extension"));
+        assertThatCollection(storageClient.list(true))
+                .doesNotContain("foo/bar-baz.other-extension");
+        assertThatCollection(storageClient.list("foo/uncompressed", true))
+                .containsExactlyInAnyOrderElementsOf(
+                        Set.of("foo/uncompressed.bz", "foo/uncompressed.gz"));
+        assertDoesNotThrow(() -> storageClient.delete("foo/uncompressed", true));
+        assertThatCollection(storageClient.list("foo/b", true))
+                .containsExactlyInAnyOrderElementsOf(Set.of("foo/bar-baz.gz", "foo/bar-baz"));
+        assertDoesNotThrow(() -> storageClient.delete("foo/b", true));
+        assertThatCollection(storageClient.list(true)).isEmpty();
 
         // Test deletion of a nested object
         final var nestedPath = "foo/bar/baz/qux.txt";
@@ -203,6 +218,9 @@ class StorageClientTest {
         assertDoesNotThrow(() -> storageClient.delete(nestedPath, true));
         assertThatCollection(storageClient.list(true)).isEmpty();
         assertThatCollection(storageClient.list()).isEmpty();
+        assertFalse(storageClient.exists("foo/"));
+        assertFalse(storageClient.exists("foo/bar/"));
+        assertFalse(storageClient.exists("foo/bar/baz"));
 
         // Cleanup for the next run
         assertDoesNotThrow(() -> storageClient.delete("", true));
