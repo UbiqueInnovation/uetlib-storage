@@ -2,6 +2,10 @@
 
 ## 1.1.4
 
+- Added `PrefixStorageClient` to allow writing to sub-paths. For example, we can use a single S3
+  Bucket and create multiple storage clients writing to subfolders of the bucket.
+- Fixed some more inconsistencies between `FileSystemStorageClient` and all other implementations.
+  convenient.
 - `FileSystemStorageClient` write uncompressed is the default again, since this is way more
   convenient.
 - Removed progress logger from `AmazonS3StorageClient`. It was way too verbose.
