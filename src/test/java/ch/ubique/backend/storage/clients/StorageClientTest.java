@@ -1,7 +1,7 @@
 package ch.ubique.backend.storage.clients;
 
 import static ch.ubique.backend.test.assertion.AssertionUtils.assertThrowsWithMessage;
-
+import static org.assertj.core.api.Assertions.assertThatCollection;
 import static org.junit.jupiter.api.Assertions.*;
 
 import ch.ubique.backend.core.utils.InputStreamUtils;
@@ -11,10 +11,10 @@ import ch.ubique.backend.storage.output.ByteOutput;
 
 import jakarta.validation.constraints.NotNull;
 
-import org.apache.commons.io.FileUtils;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.retry.support.RetryTemplateBuilder;
 import org.testcontainers.Testcontainers;
 import org.testcontainers.containers.GenericContainer;
@@ -32,73 +32,25 @@ import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 @SuppressWarnings("resource")
 class StorageClientTest {
 
-    @NotNull
-    private static String readStringAndClose(final InputStream storageClient) throws IOException {
-        return new String(
-                InputStreamUtils.readBytesAndClose(storageClient), StandardCharsets.UTF_8);
-    }
+    private static final GenericContainer<?> AZURE_BLOB_STORAGE_CONTAINER =
+            new GenericContainer<>("mcr.microsoft.com/azure-storage/azurite")
+                    .withImagePullPolicy(PullPolicy.ageBased(Duration.ofDays(30)))
+                    .withExposedPorts(10000);
 
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void testFileSystemStorageClient(final boolean writeUncompressed) throws IOException {
-        final var tempDir = Files.createTempDirectory(null);
-        final var storageClient =
-                new FileSystemStorageClient(tempDir.toString(), writeUncompressed);
-
-        test(storageClient);
-
-        FileUtils.deleteDirectory(tempDir.toFile());
-    }
-
-    @Test
-    void testS3StorageClient() throws IOException {
-        runMinioCompatibleTest(
-                (bucket, endpoint, accessKey, secretKey) -> {
-                    final var storageClient =
-                            new AmazonS3StorageClient(
-                                    bucket,
-                                    null,
-                                    S3AsyncClient.builder()
-                                            .credentialsProvider(
-                                                    StaticCredentialsProvider.create(
-                                                            AwsBasicCredentials.create(
-                                                                    accessKey, secretKey)))
-                                            .region(Region.EU_CENTRAL_1)
-                                            .multipartEnabled(true)
-                                            .endpointOverride(URI.create(endpoint))
-                                            .forcePathStyle(true)
-                                            .requestChecksumCalculation(
-                                                    RequestChecksumCalculation.WHEN_REQUIRED)
-                                            .build());
-                    storageClient.createBucket("test");
-                    return storageClient;
-                });
-    }
-
-    @Test
-    void testMinioStorageClient() throws IOException {
-        runMinioCompatibleTest(
-                (bucket, endpoint, accessKey, secretKey) -> {
-                    final var storageClient =
-                            new MinioStorageClient(
-                                    bucket, endpoint, accessKey, secretKey, null, null);
-                    storageClient.createBucket(bucket);
-                    return storageClient;
-                });
-    }
-
-    void runMinioCompatibleTest(final MinioStorageClientProducer producer) throws IOException {
-        try (final var minioServer =
-                new GenericContainer<>("minio/minio")
-                        .withImagePullPolicy(PullPolicy.ageBased(Duration.ofDays(30)))) {
-            minioServer
+    private static final GenericContainer<?> MINIO_CONTAINER =
+            new GenericContainer<>("minio/minio")
+                    .withImagePullPolicy(PullPolicy.ageBased(Duration.ofDays(30)))
                     .withEnv("MINIO_ACCESS_KEY", "test")
                     .withEnv("MINIO_SECRET_KEY", "test1234")
                     .withCommand("server /data")
@@ -107,63 +59,28 @@ class StorageClientTest {
                             new HttpWaitStrategy()
                                     .forPath("/minio/health/ready")
                                     .forPort(9000)
-                                    .withStartupTimeout(Duration.ofSeconds(10)))
-                    .start();
+                                    .withStartupTimeout(Duration.ofSeconds(10)));
 
-            final var mappedPort = minioServer.getFirstMappedPort();
-            Testcontainers.exposeHostPorts(mappedPort);
-            final var minioServerUrl =
-                    String.format("http://%s:%s", minioServer.getHost(), mappedPort);
-
-            final var storageClient = producer.create("test", minioServerUrl, "test", "test1234");
-
-            test(storageClient);
-
-            minioServer.stop();
-        }
+    @BeforeAll
+    static void createContainers() {
+        AZURE_BLOB_STORAGE_CONTAINER.start();
+        MINIO_CONTAINER.start();
     }
 
-    @Test
-    void testAzureBlobStorageClient() throws IOException {
-        try (final var azureBlobStorageContainer =
-                new GenericContainer<>("mcr.microsoft.com/azure-storage/azurite")
-                        .withImagePullPolicy(PullPolicy.ageBased(Duration.ofDays(30)))) {
-            azureBlobStorageContainer.withExposedPorts(10000).start();
-
-            final var mappedPort = azureBlobStorageContainer.getFirstMappedPort();
-            Testcontainers.exposeHostPorts(mappedPort);
-
-            final var connectionString =
-                    String.format(
-                            "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://%s:%s/devstoreaccount1;",
-                            azureBlobStorageContainer.getHost(), mappedPort);
-
-            final var storageClient = new AzureBlobStorageClient("test", connectionString);
-
-            storageClient.createContainer("test");
-
-            test(storageClient);
-
-            azureBlobStorageContainer.stop();
-        }
+    @AfterAll
+    static void stopContainers() {
+        AZURE_BLOB_STORAGE_CONTAINER.stop();
+        MINIO_CONTAINER.stop();
     }
 
-    private void test(final StorageClient storageClient) throws IOException {
+    @ParameterizedTest
+    @MethodSource("createStorageClients")
+    void test(final StorageClient storageClient) throws IOException {
 
-        if (!(storageClient instanceof RetryStorageClient)) {
-            final var retryStorageClient =
-                    storageClient.retryable(
-                            new RetryTemplateBuilder()
-                                    .maxAttempts(2)
-                                    .fixedBackoff(Duration.ofMillis(1))
-                                    .build());
-            test(retryStorageClient); // Also test retryable version
-        }
-
-        assertEquals(Set.of(), storageClient.list());
+        assertThatCollection(storageClient.list()).isEmpty();
 
         storageClient.write(new ByteOutput("Hello World".getBytes(StandardCharsets.UTF_8)), "foo");
-        assertEquals(Set.of("foo"), storageClient.list());
+        assertThatCollection(storageClient.list()).containsExactlyElementsOf(Set.of("foo"));
 
         assertEquals("Hello World", readStringAndClose(storageClient.read("foo")));
 
@@ -185,37 +102,50 @@ class StorageClientTest {
         assertTrue(storageClient.exists("bar/foo2"));
         assertFalse(storageClient.exists("nonExisting"));
 
-        assertEquals(Set.of("bar/foo1"), storageClient.list("bar/foo1", false));
-        assertEquals(Set.of("bar/foo1"), storageClient.list("bar/foo1", true));
-        assertEquals(Set.of(), storageClient.list("bar/nonExisting", false));
-        assertEquals(Set.of(), storageClient.list("bar/nonExisting", true));
-        assertEquals(Set.of(), storageClient.list("nonExisting/bar", false));
-        assertEquals(Set.of(), storageClient.list("nonExisting/bar", true));
+        assertThatCollection(storageClient.list("bar/foo1", false))
+                .containsExactlyInAnyOrderElementsOf(Set.of("bar/foo1"));
+        assertThatCollection(storageClient.list("bar/foo1", true))
+                .containsExactlyInAnyOrderElementsOf(Set.of("bar/foo1"));
+        assertThatCollection(storageClient.list("bar/nonExisting", false)).isEmpty();
+        assertThatCollection(storageClient.list("bar/nonExisting", true)).isEmpty();
+        assertThatCollection(storageClient.list("nonExisting/bar", false)).isEmpty();
+        assertThatCollection(storageClient.list("nonExisting/bar", true)).isEmpty();
 
-        assertEquals(Set.of("foo", "bar/"), storageClient.list());
-        assertEquals(Set.of("foo", "bar/foo1", "bar/foo2"), storageClient.list(true));
-        assertEquals(Set.of("bar/foo1", "bar/foo2"), storageClient.list("bar", true));
-        assertEquals(Set.of("bar/foo1", "bar/foo2"), storageClient.list("bar/", true));
-        assertEquals(Set.of("bar/"), storageClient.list("bar"));
-        assertEquals(Set.of("bar/foo1", "bar/foo2"), storageClient.list("bar/"));
+        assertThatCollection(storageClient.list())
+                .containsExactlyInAnyOrderElementsOf(Set.of("foo", "bar/"));
+        assertThatCollection(storageClient.list())
+                .containsExactlyInAnyOrderElementsOf(Set.of("foo", "bar/"));
+        assertThatCollection(storageClient.list(true))
+                .containsExactlyInAnyOrderElementsOf(Set.of("foo", "bar/foo1", "bar/foo2"));
+        assertThatCollection(storageClient.list("bar", true))
+                .containsExactlyInAnyOrderElementsOf(Set.of("bar/foo1", "bar/foo2"));
+        assertThatCollection(storageClient.list("bar/", true))
+                .containsExactlyInAnyOrderElementsOf(Set.of("bar/foo1", "bar/foo2"));
+        assertThatCollection(storageClient.list("bar"))
+                .containsExactlyInAnyOrderElementsOf(Set.of("bar/"));
+        assertThatCollection(storageClient.list("bar/"))
+                .containsExactlyInAnyOrderElementsOf(Set.of("bar/foo1", "bar/foo2"));
 
         assertDoesNotThrow(() -> storageClient.delete("bar/nonExisting"));
         assertDoesNotThrow(() -> storageClient.delete("nonExisting/bar"));
         assertDoesNotThrow(() -> storageClient.delete("bar/foo1"));
         assertFalse(storageClient.exists("bar/foo1"));
-        assertEquals(Set.of("foo", "bar/foo2"), storageClient.list(true));
+        assertThatCollection(storageClient.list(true))
+                .containsExactlyInAnyOrderElementsOf(Set.of("foo", "bar/foo2"));
 
         assertThrows(IOException.class, () -> storageClient.delete("bar"));
         assertTrue(storageClient.exists("bar/"));
         assertTrue(storageClient.exists("bar/foo2"));
-        assertEquals(Set.of("foo", "bar/"), storageClient.list());
+        assertThatCollection(storageClient.list())
+                .containsExactlyInAnyOrderElementsOf(Set.of("foo", "bar/"));
 
         assertDoesNotThrow(() -> storageClient.delete("bar", true));
         assertTrue(storageClient.exists("foo"));
         assertFalse(storageClient.exists("bar/"));
         assertFalse(storageClient.exists("bar/foo1"));
         assertFalse(storageClient.exists("bar/foo2"));
-        assertEquals(Set.of("foo"), storageClient.list());
+        assertThatCollection(storageClient.list())
+                .containsExactlyInAnyOrderElementsOf(Set.of("foo"));
 
         assertDoesNotThrow(() -> storageClient.delete("foo"));
         assertTrue(storageClient.list().isEmpty());
@@ -251,9 +181,12 @@ class StorageClientTest {
         }
 
         assertTrue(storageClient.exists("foo/uncompressed"));
-        assertEquals(
-                Set.of("foo/uncompressed.gz", "foo/uncompressed.bz"),
-                storageClient.list("foo/uncompressed"));
+        assertThatCollection(storageClient.list("foo/uncompressed"))
+                .containsExactlyInAnyOrderElementsOf(
+                        Set.of("foo/uncompressed.gz", "foo/uncompressed.bz"));
+        assertThrows(
+                NonRetryableStorageClientException.class,
+                () -> storageClient.delete("foo/uncompressed"));
         assertThrowsWithMessage(
                 NonRetryableStorageClientException.class,
                 () -> storageClient.delete("foo/uncompressed"),
@@ -261,5 +194,82 @@ class StorageClientTest {
 
         assertDoesNotThrow(() -> storageClient.delete("foo", true));
         assertTrue(storageClient.list().isEmpty());
+    }
+
+    static Collection<StorageClient> createStorageClients() throws IOException {
+        final var tempDir = Files.createTempDirectory(null);
+        final var clients =
+                Stream.of(
+                                createLocalStorageClients(tempDir),
+                                createAzureBlobStorageClient(),
+                                createMinioAndAwsStorageClients())
+                        .flatMap(Function.identity());
+
+        return clients.flatMap(StorageClientTest::thisPlusRetryClient).toList();
+    }
+
+    private static Stream<StorageClient> thisPlusRetryClient(final StorageClient client) {
+        final var retryTemplate =
+                new RetryTemplateBuilder()
+                        .maxAttempts(2)
+                        .fixedBackoff(Duration.ofMillis(1))
+                        .build();
+        return Stream.of(client, client.retryable(retryTemplate));
+    }
+
+    private static Stream<StorageClient> createLocalStorageClients(Path tempDir) {
+        return Stream.of(new FileSystemStorageClient(tempDir.toString(), false));
+    }
+
+    static Stream<StorageClient> createAzureBlobStorageClient() {
+        final var mappedPort = AZURE_BLOB_STORAGE_CONTAINER.getFirstMappedPort();
+        Testcontainers.exposeHostPorts(mappedPort);
+
+        final var connectionString =
+                String.format(
+                        "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;"
+                                + "AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;"
+                                + "BlobEndpoint=http://%s:%s/devstoreaccount1;",
+                        AZURE_BLOB_STORAGE_CONTAINER.getHost(), mappedPort);
+
+        final var storageClient = new AzureBlobStorageClient("test", connectionString);
+        storageClient.createContainer("test");
+        return Stream.of(storageClient);
+    }
+
+    static Stream<StorageClient> createMinioAndAwsStorageClients() throws IOException {
+        final var mappedPort = MINIO_CONTAINER.getFirstMappedPort();
+        Testcontainers.exposeHostPorts(mappedPort);
+        final var endpoint = String.format("http://%s:%s", MINIO_CONTAINER.getHost(), mappedPort);
+        final var bucket = "test";
+        final var accessKey = "test";
+        final var secretKey = "test1234";
+
+        final var minioStorageClient =
+                new MinioStorageClient(bucket, endpoint, accessKey, secretKey, null, null);
+        minioStorageClient.createBucket(bucket);
+
+        final var awsStorageClient =
+                new AmazonS3StorageClient(
+                        bucket,
+                        null,
+                        S3AsyncClient.builder()
+                                .credentialsProvider(
+                                        StaticCredentialsProvider.create(
+                                                AwsBasicCredentials.create(accessKey, secretKey)))
+                                .region(Region.EU_CENTRAL_1)
+                                .multipartEnabled(true)
+                                .endpointOverride(URI.create(endpoint))
+                                .forcePathStyle(true)
+                                .requestChecksumCalculation(
+                                        RequestChecksumCalculation.WHEN_REQUIRED)
+                                .build());
+        return Stream.of(minioStorageClient, awsStorageClient);
+    }
+
+    @NotNull
+    private static String readStringAndClose(final InputStream storageClient) throws IOException {
+        return new String(
+                InputStreamUtils.readBytesAndClose(storageClient), StandardCharsets.UTF_8);
     }
 }

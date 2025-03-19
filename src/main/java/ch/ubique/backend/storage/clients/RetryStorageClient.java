@@ -14,6 +14,8 @@ import com.pivovarit.function.ThrowingRunnable;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.springframework.retry.RetryCallback;
 import org.springframework.retry.support.RetryTemplate;
 
@@ -41,19 +43,14 @@ public class RetryStorageClient implements StorageClient {
     public RetryStorageClient(
             @NotNull final StorageClient storageClient,
             @Nullable final RetryTemplate retryTemplate) {
-        this.storageClient = requireNonNull(storageClient, "Storage client must not be null.");
+        this.storageClient =
+                requireNonNull(storageClient, "Storage client must not be null.").withoutRetry();
         this.retryTemplate = requireNonNullElse(retryTemplate, DEFAULT_RETRY_TEMPLATE);
     }
 
     @Override
-    public StorageClient retryable(final RetryTemplate retryTemplate) {
-        // Unwrap and wrap again with new retry template
-        return withoutRetry().retryable(retryTemplate);
-    }
-
-    @Override
     public StorageClient withoutRetry() {
-        return storageClient.withoutRetry();
+        return storageClient;
     }
 
     @Override
@@ -122,5 +119,12 @@ public class RetryStorageClient implements StorageClient {
                             runnable.run();
                             return null;
                         });
+    }
+
+    @Override
+    public String toString() {
+        return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+                .append("client", storageClient)
+                .toString();
     }
 }
