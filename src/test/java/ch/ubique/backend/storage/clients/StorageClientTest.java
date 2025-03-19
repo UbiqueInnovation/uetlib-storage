@@ -1,6 +1,6 @@
 package ch.ubique.backend.storage.clients;
 
-import static ch.ubique.backend.test.assertion.AssertionUtils.assertThrowsWithMessage;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCollection;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -185,13 +185,11 @@ class StorageClientTest {
         assertThatCollection(storageClient.list("foo/uncompressed"))
                 .containsExactlyInAnyOrderElementsOf(
                         Set.of("foo/uncompressed.gz", "foo/uncompressed.bz"));
-        assertThrows(
-                NonRetryableStorageClientException.class,
-                () -> storageClient.delete("foo/uncompressed"));
-        assertThrowsWithMessage(
-                NonRetryableStorageClientException.class,
-                () -> storageClient.delete("foo/uncompressed"),
-                "cannot delete non-empty directory. [path=foo/uncompressed, recursive=false]");
+        final var exception =
+                assertThrows(
+                        NonRetryableStorageClientException.class,
+                        () -> storageClient.delete("foo/uncompressed"));
+        assertThat(exception.getMessage()).startsWith("cannot delete non-empty directory.");
 
         // Delete by partial path
         assertThatCollection(storageClient.list(true)).contains("foo/bar-baz.other-extension");
@@ -235,7 +233,9 @@ class StorageClientTest {
                                 createMinioAndAwsStorageClients())
                         .flatMap(Function.identity());
 
-        return clients.flatMap(StorageClientTest::thisPlusRetryClient).toList();
+        return clients.flatMap(StorageClientTest::thisPlusRetryClient)
+                .flatMap(StorageClientTest::thisPlusPrefixClients)
+                .toList();
     }
 
     private static Stream<StorageClient> thisPlusRetryClient(final StorageClient client) {
@@ -247,7 +247,14 @@ class StorageClientTest {
         return Stream.of(client, client.retryable(retryTemplate));
     }
 
-    private static Stream<StorageClient> createLocalStorageClients(Path tempDir) {
+    private static Stream<StorageClient> thisPlusPrefixClients(final StorageClient client) {
+        return Stream.concat(
+                Stream.of(client),
+                Stream.of("foo", "bar/", "foo/bar//baz")
+                        .map(prefix -> new PrefixStorageClient(prefix, client)));
+    }
+
+    private static Stream<StorageClient> createLocalStorageClients(final Path tempDir) {
         return Stream.of(new FileSystemStorageClient(tempDir.toString(), false));
     }
 
