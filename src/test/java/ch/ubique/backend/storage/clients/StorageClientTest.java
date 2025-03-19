@@ -13,6 +13,8 @@ import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.retry.support.RetryTemplateBuilder;
 import org.testcontainers.Testcontainers;
 import org.testcontainers.containers.GenericContainer;
@@ -43,10 +45,12 @@ class StorageClientTest {
                 InputStreamUtils.readBytesAndClose(storageClient), StandardCharsets.UTF_8);
     }
 
-    @Test
-    void testFileSystemStorageClient() throws IOException {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void testFileSystemStorageClient(final boolean writeUncompressed) throws IOException {
         final var tempDir = Files.createTempDirectory(null);
-        final var storageClient = new FileSystemStorageClient(tempDir.toString());
+        final var storageClient =
+                new FileSystemStorageClient(tempDir.toString(), writeUncompressed);
 
         test(storageClient);
 

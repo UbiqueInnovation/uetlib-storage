@@ -43,7 +43,7 @@ public class FileSystemStorageClient implements StorageClient {
     private final boolean writeUncompressed;
 
     public FileSystemStorageClient(final String basePath) {
-        this(basePath, false);
+        this(basePath, true);
     }
 
     public FileSystemStorageClient(final String basePath, final boolean writeUncompressed) {

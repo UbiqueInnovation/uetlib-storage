@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 1.1.4
+
+- `FileSystemStorageClient` write uncompressed is the default again, since this is way more
+  convenient.
+- Removed progress logger from `AmazonS3StorageClient`. It was way too verbose.
+
 ## 1.1.3
 
 - Handle files and byte payloads explicitly for the AmazonS3StorageClient. This ensures the AWS
