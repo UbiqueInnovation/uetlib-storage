@@ -129,7 +129,6 @@ public class FileSystemStorageClient implements StorageClient {
     }
 
     private boolean deleteRecursive(final String path) throws StorageClientException {
-        final var recursive = true;
         final var existing = list(path, true);
         var anyDeleted = false;
         for (final var pathToDelete : existing) {
