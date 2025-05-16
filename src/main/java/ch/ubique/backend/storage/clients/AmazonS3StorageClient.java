@@ -6,6 +6,7 @@ import ch.ubique.backend.core.utils.StreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.storage.exception.RetryableStorageClientException;
 import ch.ubique.backend.storage.exception.S3StorageClientException;
 import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.ByteOutput;
@@ -26,6 +27,7 @@ import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsPr
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -201,7 +203,7 @@ public class AmazonS3StorageClient implements StorageClient {
             // Wait for the upload to finish - exceptions aren't thrown until 'join' is called
             upload.completionFuture().join();
         } catch (final CancellationException | CompletionException | IOException e) {
-            throw StorageClientException.of(
+            throw toStorageClientException(
                     MessageFormat.format(
                             "failed to write for [path={0}, outputMetaData={1}, output={2}]",
                             path, outputMetaData, output),
@@ -264,7 +266,7 @@ public class AmazonS3StorageClient implements StorageClient {
 
             return download;
         } catch (final CancellationException | CompletionException | IOException e) {
-            throw StorageClientException.of(
+            throw toStorageClientException(
                     MessageFormat.format(
                             "failed to read for [path={0}, doUncompressIfNeeded={1}]",
                             path, doUncompressIfNeeded),
@@ -279,7 +281,7 @@ public class AmazonS3StorageClient implements StorageClient {
         final var existing = list(path, true);
 
         if (!recursive && existing.stream().anyMatch(object -> !object.equals(path))) {
-            throw StorageClientException.of(
+            throw toStorageClientException(
                     MessageFormat.format(
                             "cannot delete non-empty directory. [path={0}, recursive=false]", path),
                     new DirectoryNotEmptyException(path));
@@ -310,7 +312,7 @@ public class AmazonS3StorageClient implements StorageClient {
             return true;
         }
 
-        throw StorageClientException.of(
+        throw toStorageClientException(
                 "Failed to delete object(s) from S3", new S3StorageClientException(errors));
     }
 
@@ -338,7 +340,7 @@ public class AmazonS3StorageClient implements StorageClient {
             }
             return keys;
         } catch (final CancellationException | CompletionException e) {
-            throw StorageClientException.of(
+            throw toStorageClientException(
                     MessageFormat.format(
                             "failed to list for [mappingPath={0}, recursive={1}]", path, recursive),
                     e);
@@ -389,7 +391,7 @@ public class AmazonS3StorageClient implements StorageClient {
 
             return presignedRequest.url().toString();
         } catch (final CancellationException | CompletionException e) {
-            throw StorageClientException.of(
+            throw toStorageClientException(
                     MessageFormat.format(
                             "failed to get signed url for [mappingPath={0}, expiry={1}]",
                             path, expiry),
@@ -407,10 +409,32 @@ public class AmazonS3StorageClient implements StorageClient {
         try {
             s3AsyncClient.createBucket(builder -> builder.bucket(bucketName)).join();
         } catch (final CancellationException | CompletionException e) {
-            throw StorageClientException.of(
+            throw toStorageClientException(
                     MessageFormat.format(
                             "failed to create bucket for [bucketName={0}]", bucketName),
                     e);
         }
+    }
+
+    private static StorageClientException toStorageClientException(
+            final String message, final Throwable throwable) {
+
+        // Task was canceled -> can be retried
+        if (throwable instanceof final CancellationException e) {
+            return new RetryableStorageClientException(message, e);
+        }
+
+        // Unwrap the cause of the CompletionException
+        if (throwable instanceof final CompletionException e) {
+            return toStorageClientException(message, e.getCause());
+        }
+
+        // SdkClientException is retryable -> can be retried
+        if (throwable instanceof final SdkClientException e && e.retryable()) {
+            return new RetryableStorageClientException(message, throwable);
+        }
+
+        // Default
+        return toStorageClientException(message, throwable);
     }
 }
