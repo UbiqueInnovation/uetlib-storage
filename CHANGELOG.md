@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.1.5
+
+- Better exception handling for `AmazonS3StorageClient`
+
 ## 1.1.4
 
 - Added `PrefixStorageClient` to allow writing to sub-paths. For example, we can use a single S3
