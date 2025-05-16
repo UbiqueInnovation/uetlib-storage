@@ -435,6 +435,6 @@ public class AmazonS3StorageClient implements StorageClient {
         }
 
         // Default
-        return toStorageClientException(message, throwable);
+        return StorageClientException.of(message, throwable);
     }
 }
