@@ -6,6 +6,7 @@ import java.io.InterruptedIOException;
 import java.net.SocketException;
 
 import java.net.UnknownHostException;
+import java.util.concurrent.TimeoutException;
 import javax.net.ssl.SSLHandshakeException;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
@@ -32,7 +33,8 @@ public abstract sealed class StorageClientException extends IOException
                 || cause instanceof SSLHandshakeException
                 || cause instanceof EOFException
                 || cause instanceof SocketException
-                || cause instanceof UnknownHostException;
+                || cause instanceof UnknownHostException
+                || cause instanceof TimeoutException;
     }
 
     public boolean isRetryable() {
