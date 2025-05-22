@@ -77,34 +77,39 @@ public final class StorageBuilderUtil {
 
     @NotNull
     private static StorageMethodInfo findStorageMethodInfo(final Method storageMethod) {
-        final var outputMapping = findAnnotation(storageMethod, OutputMapping.class);
-        if (outputMapping.isPresent()) {
+        final var outputMappingMaybe = findAnnotation(storageMethod, OutputMapping.class);
+        if (outputMappingMaybe.isPresent()) {
+            final var outputMapping = outputMappingMaybe.get();
             return new StorageMethodInfo(
-                    storageMethod, outputMapping.get().path(), StorageMappingType.OUTPUT);
+                    storageMethod, outputMapping.path(), StorageMappingType.OUTPUT, outputMapping);
         }
 
-        final var inputMapping = findAnnotation(storageMethod, InputMapping.class);
-        if (inputMapping.isPresent()) {
+        final var inputMappingMaybe = findAnnotation(storageMethod, InputMapping.class);
+        if (inputMappingMaybe.isPresent()) {
+            final var inputMapping = inputMappingMaybe.get();
             return new StorageMethodInfo(
-                    storageMethod, inputMapping.get().path(), StorageMappingType.INPUT);
+                    storageMethod, inputMapping.path(), StorageMappingType.INPUT, inputMapping);
         }
 
-        final var listMapping = findAnnotation(storageMethod, ListMapping.class);
-        if (listMapping.isPresent()) {
+        final var listMappingMaybe = findAnnotation(storageMethod, ListMapping.class);
+        if (listMappingMaybe.isPresent()) {
+            final var listMapping = listMappingMaybe.get();
             return new StorageMethodInfo(
-                    storageMethod, listMapping.get().path(), StorageMappingType.LIST);
+                    storageMethod, listMapping.path(), StorageMappingType.LIST, listMapping);
         }
 
-        final var existsMapping = findAnnotation(storageMethod, ExistsMapping.class);
-        if (existsMapping.isPresent()) {
+        final var existsMappingMaybe = findAnnotation(storageMethod, ExistsMapping.class);
+        if (existsMappingMaybe.isPresent()) {
+            final var existsMapping = existsMappingMaybe.get();
             return new StorageMethodInfo(
-                    storageMethod, existsMapping.get().path(), StorageMappingType.EXISTS);
+                    storageMethod, existsMapping.path(), StorageMappingType.EXISTS, existsMapping);
         }
 
-        final var deleteMapping = findAnnotation(storageMethod, DeleteMapping.class);
-        if (deleteMapping.isPresent()) {
+        final var deleteMappingMaybe = findAnnotation(storageMethod, DeleteMapping.class);
+        if (deleteMappingMaybe.isPresent()) {
+            final var deleteMapping = deleteMappingMaybe.get();
             return new StorageMethodInfo(
-                    storageMethod, deleteMapping.get().path(), StorageMappingType.DELETE);
+                    storageMethod, deleteMapping.path(), StorageMappingType.DELETE, deleteMapping);
         }
 
         throw new IllegalArgumentException(
