@@ -15,7 +15,6 @@ import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.InputStream;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.stream.IntStream;
@@ -39,20 +38,9 @@ public class OutputMappingInvocationHandler implements StorageMappingInvocationH
     private Output getOutput(
             final ObjectMapper objectMapper,
             final OutputMapping outputMapping,
-            final Annotation[][] parameterAnnotations,
+            final Method method,
             final Object[] args) {
-        final var storageObjectParameterIndex =
-                IntStream.range(0, parameterAnnotations.length)
-                        .filter(
-                                i ->
-                                        Arrays.stream(parameterAnnotations[i])
-                                                .anyMatch(StorageObject.class::isInstance))
-                        .findFirst()
-                        .orElseThrow(
-                                () ->
-                                        new IllegalStateException(
-                                                "OutputMapping requires one argument to be"
-                                                        + " annotated with '@StorageObject'"));
+        final var storageObjectParameterIndex = getStorageObjectParameterIndex(method);
         final var storageObject = args[storageObjectParameterIndex];
         final var contentType = outputMapping.contentType();
 
@@ -72,6 +60,21 @@ public class OutputMappingInvocationHandler implements StorageMappingInvocationH
         return output;
     }
 
+    private static int getStorageObjectParameterIndex(final Method method) {
+        final var parameterAnnotations = method.getParameterAnnotations();
+        return IntStream.range(0, parameterAnnotations.length)
+                .filter(
+                        i ->
+                                Arrays.stream(parameterAnnotations[i])
+                                        .anyMatch(StorageObject.class::isInstance))
+                .findFirst()
+                .orElseThrow(
+                        () ->
+                                new IllegalStateException(
+                                        "OutputMapping requires one argument to be"
+                                                + " annotated with '@StorageObject'"));
+    }
+
     @Override
     public Object invoke(
             final StorageMappingInvocationProperties storageMappingInvocationProperties,
@@ -82,10 +85,9 @@ public class OutputMappingInvocationHandler implements StorageMappingInvocationH
         final var objectMapper = storageMappingInvocationProperties.objectMapper();
 
         final var outputMapping = findAnnotation(method, OutputMapping.class);
-        final var parameterAnnotations = method.getParameterAnnotations();
         final var level = ArrayUtils.singletonOrNull(outputMapping.logLevel());
 
-        final var output = getOutput(objectMapper, outputMapping, parameterAnnotations, args);
+        final var output = getOutput(objectMapper, outputMapping, method, args);
 
         final var basePath = storageMappingInvocationProperties.basePath();
         final var path =
