@@ -151,12 +151,10 @@ public final class StorageBuilderUtil {
                                                                                 a.getSimpleName()))
                                                         .toList()));
                             }
-
                             final var storageMethodInfo = findStorageMethodInfo(method);
                             validateMappingMethod(storageMethodInfo);
                             return storageMethodInfo;
                         })
-                .peek(StorageBuilderUtil::validateMappingMethod)
                 .collect(Collectors.groupingBy(StorageMethodInfo::storageMappingType));
     }
 
