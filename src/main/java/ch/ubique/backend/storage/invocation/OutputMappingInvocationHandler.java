@@ -2,11 +2,11 @@ package ch.ubique.backend.storage.invocation;
 
 import static ch.ubique.backend.storage.invocation.InvocationHandlerUtil.*;
 import static ch.ubique.backend.storage.logger.LogAtNullableLevel.atLevel;
+import static ch.ubique.backend.storage.type.StorageObjectTypeResolver.getStorageObjectParameterIndex;
 
 import ch.ubique.backend.core.utils.ArrayUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.annotations.OutputMapping;
-import ch.ubique.backend.storage.annotations.StorageObject;
 import ch.ubique.backend.storage.output.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,7 +17,6 @@ import java.io.File;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.stream.IntStream;
 
 public class OutputMappingInvocationHandler implements StorageMappingInvocationHandler {
 
@@ -58,21 +57,6 @@ public class OutputMappingInvocationHandler implements StorageMappingInvocationH
             return output.gZip();
         }
         return output;
-    }
-
-    private static int getStorageObjectParameterIndex(final Method method) {
-        final var parameterAnnotations = method.getParameterAnnotations();
-        return IntStream.range(0, parameterAnnotations.length)
-                .filter(
-                        i ->
-                                Arrays.stream(parameterAnnotations[i])
-                                        .anyMatch(StorageObject.class::isInstance))
-                .findFirst()
-                .orElseThrow(
-                        () ->
-                                new IllegalStateException(
-                                        "OutputMapping requires one argument to be"
-                                                + " annotated with '@StorageObject'"));
     }
 
     @Override
