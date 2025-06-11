@@ -24,6 +24,7 @@ import java.util.function.Function;
 import javax.imageio.ImageIO;
 
 class ImageStorageServiceTest {
+
     private static final Function<Integer, Function<ImageVariant, String>> GENERATE_GENERATE_PATH =
             imageId -> variant -> String.format("sasImage/%d-%s.jpeg", imageId, variant.key);
     private static final Function<Integer, Function<ImageVariant, String>>

@@ -24,6 +24,7 @@ import java.util.function.Function;
  */
 @SuppressWarnings("unused")
 public class ImageStorageService {
+
     private final StorageClient storageClient;
     private final Duration sasExpiry;
     private final BlurHashClient blurHashClient;
@@ -37,7 +38,7 @@ public class ImageStorageService {
         this.blurHashClient = blurHashClient;
     }
 
-    /** Construct with default sasExpiry of 7 days. Useful if sas is not used. */
+    /** Construct with default sasExpiry of 7 days. Useful if SAS is not used. */
     public ImageStorageService(
             final StorageClient storageClient, final BlurHashClient blurHashClient) {
         this.storageClient = storageClient;
@@ -83,7 +84,6 @@ public class ImageStorageService {
                 generatePath.apply(ImageVariant.HIRES));
 
         final var thumbnail = ImageUtils.scaleAndFlush(hires, 320);
-
         storageClient.write(
                 new ByteOutput(
                         ImageUtils.imageToBytes(thumbnail, mediaType.subtype()),
@@ -92,7 +92,7 @@ public class ImageStorageService {
 
         final var blurHashRepresentation =
                 blurHashClient.encodeToBlurHashRepresentationNoResize(thumbnail);
-        // Flush clears native references so the image can be GC-ed. See tip of Scalr::resize
+        // Flush clears native references so the image can be GC-ed. See the tip of Scalr::resize
         thumbnail.flush();
         return blurHashRepresentation;
     }
