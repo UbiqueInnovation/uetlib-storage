@@ -7,7 +7,7 @@
     <parent>
         <groupId>ch.ubique</groupId>
         <artifactId>uetlib-parent</artifactId>
-        <version>1.2.0</version>
+        <version>1.2.1</version>
     </parent>
 
     <artifactId>uetlib-storage</artifactId>
@@ -32,12 +32,10 @@
         <dependency>
             <groupId>com.azure</groupId>
             <artifactId>azure-storage-blob</artifactId>
-            <version>12.27.1</version>
         </dependency>
         <dependency>
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
-            <version>8.5.13</version>
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
@@ -52,7 +50,7 @@
             <artifactId>s3-transfer-manager</artifactId>
         </dependency>
 
-        <!--    Http client used by AWS S3 SDK    -->
+        <!-- Http client used by AWS S3 SDK -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>netty-nio-client</artifactId>
