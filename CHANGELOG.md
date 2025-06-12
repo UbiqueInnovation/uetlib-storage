@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 1.2.0
+
+### Improvements
+
+- Latest uetlib dependencies with Spring Boot 3.5 support
+
 ## 1.1.5
 
 - Better exception handling for `AmazonS3StorageClient`
