@@ -57,7 +57,7 @@ public final class InvocationHandlerUtil {
     }
 
     public static String getPathTemplate(final String basePath, final String path) {
-        return basePath.isBlank() ? path : basePath + "/" + path;
+        return StringUtils.isBlank(basePath) ? path : basePath + "/" + path;
     }
 
     public static <T extends Annotation> T findAnnotation(
