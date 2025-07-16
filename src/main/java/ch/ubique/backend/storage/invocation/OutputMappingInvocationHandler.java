@@ -2,7 +2,7 @@ package ch.ubique.backend.storage.invocation;
 
 import static ch.ubique.backend.storage.invocation.InvocationHandlerUtil.*;
 import static ch.ubique.backend.storage.logger.LogAtNullableLevel.atLevel;
-import static ch.ubique.backend.storage.type.StorageObjectTypeResolver.getStorageObjectParameterIndex;
+import static ch.ubique.backend.storage.parameter.StorageObjectParameterResolver.getStorageObjectParameterIndex;
 
 import ch.ubique.backend.core.utils.ArrayUtils;
 import ch.ubique.backend.storage.OutputMetaData;

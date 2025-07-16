@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import org.slf4j.event.Level;
 
 import java.io.IOException;
+import java.util.Map;
 
 public interface TestOutputStorage {
 
@@ -24,6 +25,17 @@ public interface TestOutputStorage {
     void saveJson(
             @StorageObject TestUser json,
             @StoragePathVariable @NotBlank String jsonId,
-            @NotNull OutputMetaData outputMetaData)
+            OutputMetaData outputMetaData)
+            throws IOException;
+
+    @OutputMapping(
+            path = "files/maps/{mapId}.json",
+            contentType = "application/json",
+            documentedClass = TestUser.class,
+            logLevel = Level.TRACE)
+    void saveGenericMap(
+            @StorageObject Map<Integer, String> map,
+            @StoragePathVariable @NotBlank String mapId,
+            OutputMetaData outputMetaData)
             throws IOException;
 }

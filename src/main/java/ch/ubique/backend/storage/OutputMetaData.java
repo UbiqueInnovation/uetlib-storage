@@ -80,7 +80,7 @@ public final class OutputMetaData {
                         + requireNonNullElse(sMaxAge, maxAge).toSeconds());
     }
 
-    public OutputMetaData(final @NotNull OutputMetaData outputMetaData) {
+    public OutputMetaData(final OutputMetaData outputMetaData) {
         this.cacheControl = outputMetaData.cacheControl;
         this.expires = outputMetaData.expires;
         this.bestBefore = outputMetaData.bestBefore;
