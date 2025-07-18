@@ -6,8 +6,10 @@ import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipException;
 
 public final class CompressionUtils {
@@ -33,5 +35,14 @@ public final class CompressionUtils {
             return inputStream;
         }
         return new BufferedInputStream(inputStream);
+    }
+
+    public static byte[] gzipCompress(final byte[] uncompressedBytes) throws IOException {
+        try (final var outputStream = new ByteArrayOutputStream()) {
+            try (final var gzipOutputStream = new GZIPOutputStream(outputStream)) {
+                gzipOutputStream.write(uncompressedBytes);
+            }
+            return outputStream.toByteArray();
+        }
     }
 }
