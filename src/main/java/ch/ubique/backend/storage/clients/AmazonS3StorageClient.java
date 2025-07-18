@@ -165,7 +165,7 @@ public class AmazonS3StorageClient implements StorageClient {
             final @NotNull String path,
             @Nullable final OutputMetaData outputMetaData)
             throws StorageClientException {
-        try (final var inputStream = output.read()) {
+        try {
             final var metaData =
                     OutputMetaData.resolveOutputMetaData(
                             outputMetaData, outputMetaDataProvider, output);
@@ -184,7 +184,7 @@ public class AmazonS3StorageClient implements StorageClient {
                             .flatMap(OutputMetaData::createCannedAcl)
                             .orElse(null);
 
-            final var requestBody = createRequestBody(output, inputStream);
+            final var requestBody = createRequestBody(output);
             final var upload =
                     tm.upload(
                             uploadRequestBuilder ->
@@ -214,8 +214,7 @@ public class AmazonS3StorageClient implements StorageClient {
         }
     }
 
-    private AsyncRequestBody createRequestBody(final Output output, final InputStream inputStream)
-            throws IOException {
+    private AsyncRequestBody createRequestBody(final Output output) throws IOException {
         if (output instanceof final FileOutput fileOutput) {
             return AsyncRequestBody.fromFile(fileOutput.file());
         }
@@ -227,10 +226,13 @@ public class AmazonS3StorageClient implements StorageClient {
             final var compressedBytes = CompressionUtils.gzipCompress(byteOutput.value());
             return AsyncRequestBody.fromBytes(compressedBytes);
         }
-        return AsyncRequestBody.fromInputStream(
-                inputStream,
-                output.contentLength() < 0L ? null : output.contentLength(),
-                taskExecutor);
+
+        try (final var inputStream = output.read()) {
+            return AsyncRequestBody.fromInputStream(
+                    inputStream,
+                    output.contentLength() < 0L ? null : output.contentLength(),
+                    taskExecutor);
+        }
     }
 
     private Map<String, String> createUserMetadata(final OutputMetaData outputMetaData) {
@@ -331,7 +333,7 @@ public class AmazonS3StorageClient implements StorageClient {
         try {
             final var builder = ListObjectsV2Request.builder().bucket(bucket).prefix(path);
 
-            // If not recursive, group by common prefix
+            // If not recursive, group by the common prefix
             if (!recursive) {
                 builder.delimiter("/");
             }
@@ -428,7 +430,7 @@ public class AmazonS3StorageClient implements StorageClient {
     private static StorageClientException toStorageClientException(
             final String message, final Throwable throwable) {
 
-        // Task was canceled -> can be retried
+        // Task was cancelled -> can be retried
         if (throwable instanceof final CancellationException e) {
             return new RetryableStorageClientException(message, e);
         }
