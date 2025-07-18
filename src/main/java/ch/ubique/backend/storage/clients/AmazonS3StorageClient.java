@@ -211,7 +211,7 @@ public class AmazonS3StorageClient implements StorageClient {
                             "failed to write for [path={0}, outputMetaData={1}, output={2}]",
                             path, outputMetaData, output),
                     e,
-                    true);
+                    output.canBeRetried());
         }
     }
 
