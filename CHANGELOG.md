@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 1.2.3
+
+### Improvements
+
+- Retry write in S3 storage if the `Output` can be retried.
+
+## 1.2.2
+
+### Improvements
+
+- Split `StorageObjectTypeResolver` into `StorageObjectParameterResolver` and moved the other half to
+  `uetlib-storage-spring-boot`.
+
 ## 1.2.0
 
 ### Improvements
