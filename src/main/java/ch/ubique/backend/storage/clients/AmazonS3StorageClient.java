@@ -210,7 +210,8 @@ public class AmazonS3StorageClient implements StorageClient {
                     MessageFormat.format(
                             "failed to write for [path={0}, outputMetaData={1}, output={2}]",
                             path, outputMetaData, output),
-                    e);
+                    e,
+                    true);
         }
     }
 
@@ -429,6 +430,11 @@ public class AmazonS3StorageClient implements StorageClient {
 
     private static StorageClientException toStorageClientException(
             final String message, final Throwable throwable) {
+        return toStorageClientException(message, throwable, false);
+    }
+
+    private static StorageClientException toStorageClientException(
+            final String message, final Throwable throwable, final boolean canRetry) {
 
         // Task was cancelled -> can be retried
         if (throwable instanceof final CancellationException e) {
@@ -437,7 +443,7 @@ public class AmazonS3StorageClient implements StorageClient {
 
         // Unwrap the cause of the CompletionException
         if (throwable instanceof final CompletionException e) {
-            return toStorageClientException(message, e.getCause());
+            return toStorageClientException(message, e.getCause(), canRetry);
         }
 
         // SdkClientException is retryable -> can be retried
@@ -445,7 +451,10 @@ public class AmazonS3StorageClient implements StorageClient {
             return new RetryableStorageClientException(message, throwable);
         }
 
-        // Default
+        // Fallback: use the boolean flag
+        if (canRetry) {
+            return new RetryableStorageClientException(message, throwable);
+        }
         return StorageClientException.of(message, throwable);
     }
 }
