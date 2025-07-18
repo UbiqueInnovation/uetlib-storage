@@ -11,6 +11,7 @@ import ch.ubique.backend.storage.exception.S3StorageClientException;
 import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.FileOutput;
+import ch.ubique.backend.storage.output.GZipOutput;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
@@ -182,11 +183,13 @@ public class AmazonS3StorageClient implements StorageClient {
                     Optional.ofNullable(outputMetaData)
                             .flatMap(OutputMetaData::createCannedAcl)
                             .orElse(null);
+
+            final var requestBody = createRequestBody(output, inputStream);
             final var upload =
                     tm.upload(
                             uploadRequestBuilder ->
                                     uploadRequestBuilder
-                                            .requestBody(createRequestBody(output, inputStream))
+                                            .requestBody(requestBody)
                                             .putObjectRequest(
                                                     req ->
                                                             req.bucket(bucket)
@@ -211,12 +214,18 @@ public class AmazonS3StorageClient implements StorageClient {
         }
     }
 
-    private AsyncRequestBody createRequestBody(final Output output, final InputStream inputStream) {
+    private AsyncRequestBody createRequestBody(final Output output, final InputStream inputStream)
+            throws IOException {
         if (output instanceof final FileOutput fileOutput) {
             return AsyncRequestBody.fromFile(fileOutput.file());
         }
         if (output instanceof final ByteOutput byteOutput) {
             return AsyncRequestBody.fromBytes(byteOutput.value());
+        }
+        if (output instanceof GZipOutput(final var uncompressed)
+                && uncompressed instanceof final ByteOutput byteOutput) {
+            final var compressedBytes = CompressionUtils.gzipCompress(byteOutput.value());
+            return AsyncRequestBody.fromBytes(compressedBytes);
         }
         return AsyncRequestBody.fromInputStream(
                 inputStream,
