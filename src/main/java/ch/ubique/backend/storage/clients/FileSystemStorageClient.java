@@ -13,7 +13,6 @@ import jakarta.validation.constraints.NotNull;
 import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
-import org.apache.commons.io.filefilter.FalseFileFilter;
 import org.apache.commons.io.filefilter.PrefixFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.lang3.StringUtils;
@@ -134,7 +133,7 @@ public class FileSystemStorageClient implements StorageClient {
         for (final var pathToDelete : existing) {
             anyDeleted |= FileUtils.deleteQuietly(getCompletePath(pathToDelete).toFile());
         }
-        deleteEmptyDirectories();
+        deleteEmptyParentDirectories(path);
         return anyDeleted;
     }
 
@@ -154,7 +153,7 @@ public class FileSystemStorageClient implements StorageClient {
 
         try {
             final var deleted = Files.deleteIfExists(completePath);
-            deleteEmptyDirectories();
+            deleteEmptyParentDirectories(path);
             return deleted;
         } catch (final IOException e) {
             throw StorageClientException.of(
@@ -163,14 +162,20 @@ public class FileSystemStorageClient implements StorageClient {
         }
     }
 
-    private void deleteEmptyDirectories() {
-        FileUtils.listFilesAndDirs(
-                        Path.of(basePath).toFile(),
-                        FalseFileFilter.FALSE,
-                        DirectoryFileFilter.DIRECTORY)
-                .stream()
-                .filter(this::isEmptyDirectory)
-                .forEach(FileUtils::deleteQuietly);
+    // Delete empty directories, at "path" or parents thereof.
+    private void deleteEmptyParentDirectories(final String path) {
+        final var base = Path.of(basePath);
+        var current = Path.of(path);
+        while(current != null) {
+            final var currentFile = base.resolve(current).toFile();
+            if(isEmptyDirectory(currentFile)) {
+                currentFile.delete();
+            } else if (currentFile.exists()) {
+                // none of the parents can be empty directories.
+                break;
+            }
+            current = current.getParent();
+        }
     }
 
     private boolean isEmptyDirectory(final File file) {
