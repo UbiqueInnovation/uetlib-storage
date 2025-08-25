@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 1.2.4
+
+### Improvements
+
+- Avoid slowly finding and deleting all empty directories in `FileSystemStorageClient.delete`, only
+  remove empty directories that are parents of the item being deleted.
+
 ## 1.2.3
 
 ### Improvements
