@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 1.2.5
+
+### Fixes
+
+- Catch `InvocationTargetException` in `StorageInvocationHandler` and correctly propagate the
+  underlying exception.
+
 ## 1.2.4
 
 ### Improvements
