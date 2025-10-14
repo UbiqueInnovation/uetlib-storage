@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Optional;
@@ -48,7 +49,18 @@ public class StorageInvocationHandler implements InvocationHandler {
                                                         .map(Class::getCanonicalName)
                                                         .orElse("null"))
                                 .collect(Collectors.joining(", ")));
-                yield dispatch.get(method).invoke(storageMappingInvocationProperties, method, args);
+                try {
+                    yield dispatch.get(method)
+                            .invoke(storageMappingInvocationProperties, method, args);
+                } catch (final InvocationTargetException e) {
+                    // ANY (checked or unchecked) exception thrown by the underlying method will be
+                    // wrapped in an InvocationTargetException (a checked exception), which will be
+                    // then wrapped by the Proxy in an UndeclaredThrowableException, UNLESS we do
+                    // this ;)
+                    // See:
+                    // https://amitstechblog.wordpress.com/2011/07/24/java-proxies-and-undeclaredthrowableexception/
+                    throw e.getCause();
+                }
             }
         };
     }
