@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 1.3.0
+
+### Fixes
+
+Make sure to use the correct header date formatter for `expires`, `best-before`, etc. in output metadata.
+`RFC_1123_DATE_TIME` does not enforce two digits for day of month, as says it should.
+
 ## 1.2.5
 
 ### Fixes
