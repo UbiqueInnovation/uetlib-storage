@@ -1,16 +1,14 @@
 package ch.ubique.backend.storage;
 
-import static ch.ubique.backend.core.utils.TimeUtils.ZONE_ID_UTC;
-
 import static io.netty.handler.codec.http.HttpHeaderValues.MAX_AGE;
 import static io.netty.handler.codec.http.HttpHeaderValues.S_MAXAGE;
 
-import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
 import static java.util.Map.entry;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 
 import ch.ubique.backend.core.http.header.HttpHeader;
+import ch.ubique.backend.core.utils.HttpHeaderUtils;
 import ch.ubique.backend.core.utils.MapCollectors;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.output.Output;
@@ -224,18 +222,14 @@ public final class OutputMetaData {
     }
 
     public Optional<String> expires() {
-        return Optional.ofNullable(expires)
-                .map(instant -> RFC_1123_DATE_TIME.format(instant.atZone(ZONE_ID_UTC)));
+        return Optional.ofNullable(expires).map(HttpHeaderUtils::formatHttpHeaderDate);
     }
 
     private List<Entry<String, String>> createStandardHeaderEntries() {
         final var entries = new ArrayList<Entry<String, String>>();
 
         if (expires != null) {
-            entries.add(
-                    entry(
-                            HttpHeaders.EXPIRES,
-                            RFC_1123_DATE_TIME.format(expires.atZone(ZONE_ID_UTC))));
+            entries.add(entry(HttpHeaders.EXPIRES, HttpHeaderUtils.formatHttpHeaderDate(expires)));
         }
 
         return entries;
@@ -248,13 +242,13 @@ public final class OutputMetaData {
             entries.add(
                     entry(
                             HttpHeader.NEXT_REFRESH,
-                            RFC_1123_DATE_TIME.format(nextRefresh.atZone(ZONE_ID_UTC))));
+                            HttpHeaderUtils.formatHttpHeaderDate(nextRefresh)));
         }
         if (bestBefore != null) {
             entries.add(
                     entry(
                             HttpHeader.BEST_BEFORE,
-                            RFC_1123_DATE_TIME.format(bestBefore.atZone(ZONE_ID_UTC))));
+                            HttpHeaderUtils.formatHttpHeaderDate(bestBefore)));
         }
         if (backoff != null) {
             entries.add(entry(HttpHeader.BACKOFF, String.valueOf(backoff.getSeconds())));
