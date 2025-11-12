@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 1.3.1
+
+### Improvements
+
+- use `uetlib-self-bom` instead of fixing uetlib versions individually
+- update `uetlib-parent` to 1.3.0
+
 ## 1.3.0
 
 ### Fixes
