@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 1.3.2
+
+### Fixes
+
+- Fix S3 storage client, input stream closed too early
+
 ## 1.3.1
 
 ### Improvements
