@@ -184,27 +184,28 @@ public class AmazonS3StorageClient implements StorageClient {
                             .flatMap(OutputMetaData::createCannedAcl)
                             .orElse(null);
 
-            final var requestBody = createRequestBody(output);
-            final var upload =
-                    tm.upload(
-                            uploadRequestBuilder ->
-                                    uploadRequestBuilder
-                                            .requestBody(requestBody)
-                                            .putObjectRequest(
-                                                    req ->
-                                                            req.bucket(bucket)
-                                                                    .key(path)
-                                                                    .contentType(contentType)
-                                                                    .contentEncoding(
-                                                                            contentEncoding)
-                                                                    .cacheControl(cacheControl)
-                                                                    .expires(expires)
-                                                                    .acl(acl)
-                                                                    .metadata(
-                                                                            createUserMetadata(
-                                                                                    metaData))));
-            // Wait for the upload to finish - exceptions aren't thrown until 'join' is called
-            upload.completionFuture().join();
+            try (final var requestBodyAndClosable = createRequestBody(output)) {
+                final var upload =
+                        tm.upload(
+                                uploadRequestBuilder ->
+                                        uploadRequestBuilder
+                                                .requestBody(requestBodyAndClosable.requestBody())
+                                                .putObjectRequest(
+                                                        req ->
+                                                                req.bucket(bucket)
+                                                                        .key(path)
+                                                                        .contentType(contentType)
+                                                                        .contentEncoding(
+                                                                                contentEncoding)
+                                                                        .cacheControl(cacheControl)
+                                                                        .expires(expires)
+                                                                        .acl(acl)
+                                                                        .metadata(
+                                                                                createUserMetadata(
+                                                                                        metaData))));
+                // Wait for the upload to finish - exceptions aren't thrown until 'join' is called
+                upload.completionFuture().join();
+            }
         } catch (final CancellationException | CompletionException | IOException e) {
             throw toStorageClientException(
                     MessageFormat.format(
@@ -215,25 +216,26 @@ public class AmazonS3StorageClient implements StorageClient {
         }
     }
 
-    private AsyncRequestBody createRequestBody(final Output output) throws IOException {
+    private AsyncRequestBodyAndCloseable createRequestBody(final Output output) throws IOException {
         if (output instanceof final FileOutput fileOutput) {
-            return AsyncRequestBody.fromFile(fileOutput.file());
+            return AsyncRequestBodyAndCloseable.of(AsyncRequestBody.fromFile(fileOutput.file()));
         }
         if (output instanceof final ByteOutput byteOutput) {
-            return AsyncRequestBody.fromBytes(byteOutput.value());
+            return AsyncRequestBodyAndCloseable.of(AsyncRequestBody.fromBytes(byteOutput.value()));
         }
         if (output instanceof GZipOutput(final var uncompressed)
                 && uncompressed instanceof final ByteOutput byteOutput) {
             final var compressedBytes = CompressionUtils.gzipCompress(byteOutput.value());
-            return AsyncRequestBody.fromBytes(compressedBytes);
+            return AsyncRequestBodyAndCloseable.of(AsyncRequestBody.fromBytes(compressedBytes));
         }
 
-        try (final var inputStream = output.read()) {
-            return AsyncRequestBody.fromInputStream(
-                    inputStream,
-                    output.contentLength() < 0L ? null : output.contentLength(),
-                    taskExecutor);
-        }
+        var inputStream = output.read();
+        return AsyncRequestBodyAndCloseable.of(
+                AsyncRequestBody.fromInputStream(
+                        inputStream,
+                        output.contentLength() < 0L ? null : output.contentLength(),
+                        taskExecutor),
+                inputStream);
     }
 
     private Map<String, String> createUserMetadata(final OutputMetaData outputMetaData) {
@@ -456,5 +458,24 @@ public class AmazonS3StorageClient implements StorageClient {
             return new RetryableStorageClientException(message, throwable);
         }
         return StorageClientException.of(message, throwable);
+    }
+
+    private record AsyncRequestBodyAndCloseable(
+            AsyncRequestBody requestBody, Optional<InputStream> closable) implements AutoCloseable {
+        static AsyncRequestBodyAndCloseable of(final AsyncRequestBody requestBody) {
+            return new AsyncRequestBodyAndCloseable(requestBody, Optional.empty());
+        }
+
+        static AsyncRequestBodyAndCloseable of(
+                final AsyncRequestBody requestBody, final InputStream closable) {
+            return new AsyncRequestBodyAndCloseable(requestBody, Optional.of(closable));
+        }
+
+        @Override
+        public void close() throws IOException {
+            if (closable.isPresent()) {
+                closable.get().close();
+            }
+        }
     }
 }
