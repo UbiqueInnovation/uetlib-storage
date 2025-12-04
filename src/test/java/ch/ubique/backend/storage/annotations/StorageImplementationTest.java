@@ -22,8 +22,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
-import io.swagger.v3.oas.annotations.Parameter;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
@@ -312,7 +310,7 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage method OutputMappingMethodIllegalParameterAnnotationTypeObject::mappingMethod is not valid: Method parameter 'parameter' must either be one of type '[OutputMetaData, ObjectMapper]' or be annotated with one of [@StorageObject, @StoragePathVariable]");
+                "Storage OutputMapping method OutputMappingMethodIllegalParameterAnnotationTypeObject::mappingMethod is not valid: There must be exactly one parameter annotated with @StorageObject, found 0");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -402,7 +400,7 @@ class StorageImplementationTest {
 
     interface OutputMappingMethodIllegalParameterAnnotationTypeObject {
         @OutputMapping
-        String mappingMethod(@Parameter OutputMetaData parameter);
+        String mappingMethod(OutputMetaData parameter);
     }
 
     interface OutputMappingTooManyObjectMapper {
