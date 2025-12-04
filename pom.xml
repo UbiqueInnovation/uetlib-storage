@@ -7,24 +7,19 @@
     <parent>
         <groupId>ch.ubique</groupId>
         <artifactId>uetlib-parent</artifactId>
-        <version>1.3.0</version>
+        <version>2026.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>uetlib-storage</artifactId>
     <version>2.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <properties>
-        <!-- Sonar -->
-        <sonar.projectName>${project.artifactId}</sonar.projectName>
-        <sonar.coverage.module>${project.artifactId}</sonar.coverage.module>
-    </properties>
-
     <dependencies>
         <!-- uetlib modules -->
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-core</artifactId>
+            <version>2.0.0-SNAPSHOT</version>
         </dependency>
 
         <!-- External storage clients -->
@@ -55,6 +50,12 @@
             <artifactId>netty-nio-client</artifactId>
         </dependency>
 
+        <!-- Necessary for minio with okhttp5 -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp-jvm</artifactId>
+        </dependency>
+
         <!-- Reflections -->
         <dependency>
             <groupId>org.reflections</groupId>
@@ -75,11 +76,13 @@
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-test</artifactId>
+            <version>2.0.0-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-testcontainers</artifactId>
+            <version>2.0.0-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -93,8 +96,8 @@
         <dependencies>
             <dependency>
                 <groupId>ch.ubique</groupId>
-                <artifactId>uetlib-self-bom</artifactId>
-                <version>1.2.36</version>
+                <artifactId>uetlib-bom</artifactId>
+                <version>2.0.0-SNAPSHOT</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -102,11 +105,6 @@
     </dependencyManagement>
 
     <repositories>
-        <repository>
-            <id>ubique-artifactory</id>
-            <name>backend</name>
-            <url>https://artifactory.ubique.ch/artifactory/backend</url>
-        </repository>
         <repository>
             <id>osgeo</id>
             <name>Open Source Geospatial Foundation Repository</name>
@@ -117,8 +115,10 @@
     <distributionManagement>
         <repository>
             <id>ubique-artifactory</id>
-            <name>backend</name>
-            <url>https://artifactory.ubique.ch/artifactory/backend</url>
         </repository>
     </distributionManagement>
+
+    <scm>
+        <url>https://github.com/UbiqueInnovation/uetlib-storage</url>
+    </scm>
 </project>
