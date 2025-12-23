@@ -17,10 +17,9 @@ import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.GZipOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
 
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +46,6 @@ class StorageImplementationTest {
     StorageImplementationTest() throws IOException {
         objectMapper =
                 JsonMapper.builder()
-                        .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
                         .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
                         .build();
         storageClient =
@@ -321,7 +319,7 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage method OutputMappingTooManyObjectMapper::mappingMethod is not valid: There must be at most one parameter of type @class com.fasterxml.jackson.databind.ObjectMapper, found 2");
+                "Storage method OutputMappingTooManyObjectMapper::mappingMethod is not valid: There must be at most one parameter of type @class tools.jackson.databind.ObjectMapper, found 2");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,

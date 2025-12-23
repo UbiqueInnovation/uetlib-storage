@@ -5,7 +5,7 @@ import static ch.ubique.backend.storage.builder.StorageBuilderUtil.getStorageMet
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.invocation.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

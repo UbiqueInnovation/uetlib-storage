@@ -9,7 +9,7 @@ import ch.ubique.backend.storage.StorageMappingType;
 import ch.ubique.backend.storage.annotations.*;
 import ch.ubique.backend.storage.invocation.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 import jakarta.validation.constraints.NotNull;
 
