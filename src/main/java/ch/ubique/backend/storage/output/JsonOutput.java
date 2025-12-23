@@ -1,13 +1,13 @@
 package ch.ubique.backend.storage.output;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pivovarit.function.exception.WrappedException;
-
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import org.apache.commons.lang3.exception.UncheckedException;
+
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 public final class JsonOutput<T> extends ByteOutput implements Output {
 
@@ -54,8 +54,8 @@ public final class JsonOutput<T> extends ByteOutput implements Output {
     private static byte[] encode(final Object value, final ObjectMapper objectMapper) {
         try {
             return objectMapper.writeValueAsBytes(value);
-        } catch (final JsonProcessingException e) {
-            throw new WrappedException(e);
+        } catch (final JacksonException e) {
+            throw new UncheckedException(e);
         }
     }
 }
