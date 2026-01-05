@@ -4,6 +4,7 @@ import ch.ubique.backend.image.blurhash.BlurHashClient;
 import ch.ubique.backend.image.blurhash.BlurHashRepresentation;
 import ch.ubique.backend.image.util.ImageUtils;
 import ch.ubique.backend.storage.StorageClient;
+import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.InputStreamOutput;
 
@@ -116,12 +117,12 @@ public class ImageStorageService {
     }
 
     @SuppressWarnings("UnusedReturnValue")
-    public String getSignedUrl(final String path) throws IOException {
+    public String getSignedUrl(final String path) throws StorageClientException {
         return storageClient.getSignedUrl(
                 path, OffsetDateTime.now().plusNanos(sasExpiry.toNanos()));
     }
 
-    public String getUrl(final String path) {
+    public String getUrl(final String path) throws StorageClientException {
         return storageClient.getUrl(path);
     }
 }
