@@ -87,7 +87,7 @@ public class PrefixStorageClient implements StorageClient {
     }
 
     @Override
-    public String getUrl(final String path) {
+    public String getUrl(final String path) throws StorageClientException {
         return storageClient.getUrl(prefixedPath(path));
     }
 

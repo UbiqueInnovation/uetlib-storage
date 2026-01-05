@@ -8,7 +8,7 @@ import ch.ubique.backend.storage.output.OutputWithPath;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
-import org.springframework.retry.support.RetryTemplate;
+import org.springframework.core.retry.RetryTemplate;
 
 import java.io.InputStream;
 import java.time.OffsetDateTime;
@@ -37,7 +37,7 @@ public interface StorageClient {
     String getSignedUrl(@NotNull String path, @NotNull OffsetDateTime expiry)
             throws StorageClientException;
 
-    String getUrl(@NotNull String path);
+    String getUrl(@NotNull String path) throws StorageClientException;
 
     default void write(@NotNull final Output output, @NotNull final String path)
             throws StorageClientException {

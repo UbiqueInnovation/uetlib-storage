@@ -15,7 +15,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.springframework.retry.support.RetryTemplateBuilder;
+import org.springframework.core.retry.RetryPolicy;
+import org.springframework.core.retry.RetryTemplate;
 import org.testcontainers.Testcontainers;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
@@ -240,10 +241,8 @@ class StorageClientTest {
 
     private static Stream<StorageClient> thisPlusRetryClient(final StorageClient client) {
         final var retryTemplate =
-                new RetryTemplateBuilder()
-                        .maxAttempts(2)
-                        .fixedBackoff(Duration.ofMillis(1))
-                        .build();
+                new RetryTemplate(
+                        RetryPolicy.builder().maxRetries(2).delay(Duration.ofMillis(1)).build());
         return Stream.of(client, client.retryable(retryTemplate));
     }
 

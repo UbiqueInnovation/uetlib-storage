@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2.0.0
+
+### Breaking Changes
+
+- Replace deprecated `spring-retry` with the new Retry API integrated in spring-core.
+
 ## 1.3.2
 
 ### Fixes
