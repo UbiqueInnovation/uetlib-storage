@@ -9,12 +9,12 @@ import ch.ubique.backend.storage.StorageMappingType;
 import ch.ubique.backend.storage.annotations.*;
 import ch.ubique.backend.storage.invocation.*;
 
-import tools.jackson.databind.ObjectMapper;
-
 import jakarta.validation.constraints.NotNull;
 
 import org.jetbrains.annotations.Contract;
 import org.slf4j.LoggerFactory;
+
+import tools.jackson.databind.ObjectMapper;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -114,7 +114,8 @@ public final class StorageBuilderUtil {
 
         throw new IllegalArgumentException(
                 MessageFormat.format(
-                        "Storage method {0}::{1} is not valid: Method is (meta-)annotated with @{2}, but noy by with of {3}",
+                        "Storage method {0}::{1} is not valid: Method is (meta-)annotated with"
+                                + " @{2}, but noy by with of {3}",
                         storageMethod.getDeclaringClass().getSimpleName(),
                         storageMethod.getName(),
                         StorageMapping.class.getSimpleName(),
@@ -140,7 +141,9 @@ public final class StorageBuilderUtil {
                                                 .toList();
                                 throw new IllegalArgumentException(
                                         MessageFormat.format(
-                                                "Storage interface {0} is not valid: Method ''{0}::{1}'' is not annotated by one of {2}",
+                                                "Storage interface {0} is not valid: Method"
+                                                        + " ''{0}::{1}'' is not annotated by one of"
+                                                        + " {2}",
                                                 method.getDeclaringClass().getSimpleName(),
                                                 method.getName(),
                                                 validStorageMappingAnnotationTypes.stream()
@@ -166,7 +169,8 @@ public final class StorageBuilderUtil {
         if (mappingPath.startsWith("/")) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
-                            "Storage method {0}::{1} is not valid: ''{2}.path()'' cannot start with ''/'' Got path: ''{3}''",
+                            "Storage method {0}::{1} is not valid: ''{2}.path()'' cannot start with"
+                                    + " ''/'' Got path: ''{3}''",
                             storageMethod.getDeclaringClass().getSimpleName(),
                             storageMethod.getName(),
                             storageMappingType.mappingAnnotationType().getSimpleName(),
@@ -226,7 +230,8 @@ public final class StorageBuilderUtil {
             if (outputMetaDataParametersCount > 1) {
                 throw new IllegalArgumentException(
                         MessageFormat.format(
-                                "Storage method {0}::{1} is not valid: There must be at most one parameter of type @{2}, found {3}",
+                                "Storage method {0}::{1} is not valid: There must be at most one"
+                                        + " parameter of type @{2}, found {3}",
                                 storageMethodInfo
                                         .storageMethod()
                                         .getDeclaringClass()
@@ -241,7 +246,8 @@ public final class StorageBuilderUtil {
             if (objectMapperParametersCount > 1) {
                 throw new IllegalArgumentException(
                         MessageFormat.format(
-                                "Storage method {0}::{1} is not valid: There must be at most one parameter of type @{2}, found {3}",
+                                "Storage method {0}::{1} is not valid: There must be at most one"
+                                        + " parameter of type @{2}, found {3}",
                                 storageMethodInfo
                                         .storageMethod()
                                         .getDeclaringClass()
@@ -270,7 +276,8 @@ public final class StorageBuilderUtil {
             final List<String> validParameterAnnotationTypeNames) {
         throw new IllegalArgumentException(
                 MessageFormat.format(
-                        "Storage method {0}::{1} is not valid: Method parameter ''{2}'' must either be one of type ''{3}'' or be annotated with one of {4}",
+                        "Storage method {0}::{1} is not valid: Method parameter ''{2}'' must either"
+                                + " be one of type ''{3}'' or be annotated with one of {4}",
                         storageClassName,
                         storageMethodName,
                         parameterName,
@@ -286,7 +293,8 @@ public final class StorageBuilderUtil {
         if (storageObjectParametersCount != 1) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
-                            "Storage OutputMapping method {0}::{1} is not valid: There must be exactly one parameter annotated with @{2}, found {3}",
+                            "Storage OutputMapping method {0}::{1} is not valid: There must be"
+                                    + " exactly one parameter annotated with @{2}, found {3}",
                             storageMethodInfo.storageMethod().getDeclaringClass().getSimpleName(),
                             storageMethodInfo.storageMethod().getName(),
                             StorageObject.class.getSimpleName(),
@@ -296,7 +304,8 @@ public final class StorageBuilderUtil {
         if (storageMethodInfo.storageMethod().getReturnType() != void.class) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
-                            "Storage OutputMapping method {0}::{1} is not valid: @OutputMapping mapping method must return void",
+                            "Storage OutputMapping method {0}::{1} is not valid: @OutputMapping"
+                                    + " mapping method must return void",
                             storageMethodInfo.storageMethod().getDeclaringClass().getSimpleName(),
                             storageMethodInfo.storageMethod().getName()));
         }
@@ -308,7 +317,8 @@ public final class StorageBuilderUtil {
         if (invalidReturnTypes.contains(storageMethodInfo.storageMethod().getReturnType())) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
-                            "Storage InputMapping method {0}::{1} is not valid: @InputMapping mapping method return type must not be one of {2}",
+                            "Storage InputMapping method {0}::{1} is not valid: @InputMapping"
+                                    + " mapping method return type must not be one of {2}",
                             storageMethodInfo.storageMethod().getDeclaringClass().getSimpleName(),
                             storageMethodInfo.storageMethod().getName(),
                             invalidReturnTypes.stream().map(Class::getSimpleName).toList()));
@@ -321,7 +331,8 @@ public final class StorageBuilderUtil {
         if (!validReturnTypes.contains(storageMethodInfo.storageMethod().getReturnType())) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
-                            "Storage DeleteMapping method {0}::{1} is not valid: @DeleteMapping mapping method return type must be one of {2}",
+                            "Storage DeleteMapping method {0}::{1} is not valid: @DeleteMapping"
+                                    + " mapping method return type must be one of {2}",
                             storageMethodInfo.storageMethod().getDeclaringClass().getSimpleName(),
                             storageMethodInfo.storageMethod().getName(),
                             validReturnTypes.stream().map(Class::getSimpleName).toList()));
@@ -334,7 +345,8 @@ public final class StorageBuilderUtil {
         if (!validReturnTypes.contains(storageMethodInfo.storageMethod().getReturnType())) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
-                            "Storage ListMapping method {0}::{1} is not valid: @ListMapping mapping method return type must be one of {2}",
+                            "Storage ListMapping method {0}::{1} is not valid: @ListMapping mapping"
+                                    + " method return type must be one of {2}",
                             storageMethodInfo.storageMethod().getDeclaringClass().getSimpleName(),
                             storageMethodInfo.storageMethod().getName(),
                             validReturnTypes.stream().map(Class::getSimpleName).toList()));
@@ -347,7 +359,8 @@ public final class StorageBuilderUtil {
         if (!validReturnTypes.contains(storageMethodInfo.storageMethod().getReturnType())) {
             throw new IllegalArgumentException(
                     MessageFormat.format(
-                            "Storage ExistsMapping method {0}::{1} is not valid: @ExistsMapping mapping method return type must be one of {2}",
+                            "Storage ExistsMapping method {0}::{1} is not valid: @ExistsMapping"
+                                    + " mapping method return type must be one of {2}",
                             storageMethodInfo.storageMethod().getDeclaringClass().getSimpleName(),
                             storageMethodInfo.storageMethod().getName(),
                             validReturnTypes.stream().map(Class::getSimpleName).toList()));

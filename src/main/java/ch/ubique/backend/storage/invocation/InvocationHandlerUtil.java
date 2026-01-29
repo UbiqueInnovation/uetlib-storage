@@ -4,10 +4,11 @@ import ch.ubique.backend.core.utils.AnnotationUtils;
 import ch.ubique.backend.core.utils.StreamUtils;
 import ch.ubique.backend.storage.annotations.StoragePathVariable;
 
-import tools.jackson.databind.ObjectMapper;
 import com.google.common.collect.MoreCollectors;
 
 import org.apache.commons.lang3.StringUtils;
+
+import tools.jackson.databind.ObjectMapper;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;

@@ -14,8 +14,8 @@ import java.util.zip.GZIPOutputStream;
 public record GZipOutput(Output uncompressed) implements Output {
 
     public GZipOutput(final Output uncompressed) {
-        if (uncompressed instanceof final GZipOutput gZipOutput) {
-            this.uncompressed = gZipOutput.uncompressed;
+        if (uncompressed instanceof GZipOutput(Output uncompressed1)) {
+            this.uncompressed = uncompressed1;
         } else {
             this.uncompressed = uncompressed;
         }
@@ -77,11 +77,11 @@ public record GZipOutput(Output uncompressed) implements Output {
             return true;
         }
 
-        if (!(o instanceof final GZipOutput that)) {
+        if (!(o instanceof GZipOutput(Output uncompressed1))) {
             return false;
         }
 
-        return new EqualsBuilder().append(uncompressed, that.uncompressed).isEquals();
+        return new EqualsBuilder().append(uncompressed, uncompressed1).isEquals();
     }
 
     @Override

@@ -10,7 +10,6 @@ import ch.ubique.backend.storage.utils.CompressionUtils;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
-import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.apache.commons.io.filefilter.PrefixFileFilter;
@@ -33,6 +32,7 @@ import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.time.OffsetDateTime;
 import java.util.Collection;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @SuppressWarnings("unused")
@@ -50,6 +50,32 @@ public class FileSystemStorageClient implements StorageClient {
     public FileSystemStorageClient(final String basePath, final boolean writeUncompressed) {
         this.basePath = basePath;
         this.writeUncompressed = writeUncompressed;
+    }
+
+    private static String nonRecursiveMatch(final String queryPath, final String relativePath) {
+        final var subPath = relativePath.substring(queryPath.length());
+        if (!subPath.contains("/")) {
+            return relativePath;
+        }
+        return queryPath + subPath.split("/")[0] + "/";
+    }
+
+    private static Collection<File> listFilesWithPrefix(final Path completePath) {
+        final var directory = completePath.getParent();
+        final var prefix = completePath.getFileName().toString();
+        return FileUtils.listFiles(directory.toFile(), new PrefixFileFilter(prefix), null);
+    }
+
+    private static boolean isGzipFile(final Path path) {
+        try (final InputStream inputStream = new FileInputStream(path.toFile())) {
+            final var header = new byte[2];
+            final var bytesRead = inputStream.read(header);
+            // See https://en.wikipedia.org/wiki/Gzip
+            // The header of gzip always starts with the magic number 1f 8b
+            return bytesRead == 2 && header[0] == (byte) 0x1F && header[1] == (byte) 0x8B;
+        } catch (final IOException e) {
+            return false;
+        }
     }
 
     @Override
@@ -166,9 +192,9 @@ public class FileSystemStorageClient implements StorageClient {
     private void deleteEmptyParentDirectories(final String path) {
         final var base = Path.of(basePath);
         var current = Path.of(path);
-        while(current != null) {
+        while (current != null) {
             final var currentFile = base.resolve(current).toFile();
-            if(isEmptyDirectory(currentFile)) {
+            if (isEmptyDirectory(currentFile)) {
                 currentFile.delete();
             } else if (currentFile.exists()) {
                 // none of the parents can be empty directories.
@@ -205,23 +231,9 @@ public class FileSystemStorageClient implements StorageClient {
         return relativePaths.collect(Collectors.toUnmodifiableSet());
     }
 
-    private static String nonRecursiveMatch(final String queryPath, final String relativePath) {
-        final var subPath = relativePath.substring(queryPath.length());
-        if (!subPath.contains("/")) {
-            return relativePath;
-        }
-        return queryPath + subPath.split("/")[0] + "/";
-    }
-
     @Override
     public boolean exists(final @NotNull String path) throws StorageClientException {
         return !list(path, true).isEmpty();
-    }
-
-    private static Collection<File> listFilesWithPrefix(final Path completePath) {
-        final var directory = completePath.getParent();
-        final var prefix = completePath.getFileName().toString();
-        return FileUtils.listFiles(directory.toFile(), new PrefixFileFilter(prefix), null);
     }
 
     private Stream<String> mapToRelativePaths(final Stream<File> stream) {
@@ -247,18 +259,6 @@ public class FileSystemStorageClient implements StorageClient {
 
     public String basePath() {
         return basePath;
-    }
-
-    private static boolean isGzipFile(final Path path) {
-        try (final InputStream inputStream = new FileInputStream(path.toFile())) {
-            final var header = new byte[2];
-            final var bytesRead = inputStream.read(header);
-            // See https://en.wikipedia.org/wiki/Gzip
-            // The header of gzip always starts with the magic number 1f 8b
-            return bytesRead == 2 && header[0] == (byte) 0x1F && header[1] == (byte) 0x8B;
-        } catch (final IOException e) {
-            return false;
-        }
     }
 
     @Override

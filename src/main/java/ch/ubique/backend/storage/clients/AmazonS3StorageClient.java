@@ -159,6 +159,36 @@ public class AmazonS3StorageClient implements StorageClient {
         this.tm = S3TransferManager.builder().s3Client(s3AsyncClient).build();
     }
 
+    private static StorageClientException toStorageClientException(
+            final String message, final Throwable throwable) {
+        return toStorageClientException(message, throwable, false);
+    }
+
+    private static StorageClientException toStorageClientException(
+            final String message, final Throwable throwable, final boolean canRetry) {
+
+        // Task was cancelled -> can be retried
+        if (throwable instanceof final CancellationException e) {
+            return new RetryableStorageClientException(message, e);
+        }
+
+        // Unwrap the cause of the CompletionException
+        if (throwable instanceof final CompletionException e) {
+            return toStorageClientException(message, e.getCause(), canRetry);
+        }
+
+        // SdkClientException is retryable -> can be retried
+        if (throwable instanceof final SdkClientException e && e.retryable()) {
+            return new RetryableStorageClientException(message, throwable);
+        }
+
+        // Fallback: use the boolean flag
+        if (canRetry) {
+            return new RetryableStorageClientException(message, throwable);
+        }
+        return StorageClientException.of(message, throwable);
+    }
+
     @Override
     public final void write(
             final @NotNull Output output,
@@ -229,7 +259,7 @@ public class AmazonS3StorageClient implements StorageClient {
             return AsyncRequestBodyAndCloseable.of(AsyncRequestBody.fromBytes(compressedBytes));
         }
 
-        var inputStream = output.read();
+        final var inputStream = output.read();
         return AsyncRequestBodyAndCloseable.of(
                 AsyncRequestBody.fromInputStream(
                         inputStream,
@@ -428,36 +458,6 @@ public class AmazonS3StorageClient implements StorageClient {
                             "failed to create bucket for [bucketName={0}]", bucketName),
                     e);
         }
-    }
-
-    private static StorageClientException toStorageClientException(
-            final String message, final Throwable throwable) {
-        return toStorageClientException(message, throwable, false);
-    }
-
-    private static StorageClientException toStorageClientException(
-            final String message, final Throwable throwable, final boolean canRetry) {
-
-        // Task was cancelled -> can be retried
-        if (throwable instanceof final CancellationException e) {
-            return new RetryableStorageClientException(message, e);
-        }
-
-        // Unwrap the cause of the CompletionException
-        if (throwable instanceof final CompletionException e) {
-            return toStorageClientException(message, e.getCause(), canRetry);
-        }
-
-        // SdkClientException is retryable -> can be retried
-        if (throwable instanceof final SdkClientException e && e.retryable()) {
-            return new RetryableStorageClientException(message, throwable);
-        }
-
-        // Fallback: use the boolean flag
-        if (canRetry) {
-            return new RetryableStorageClientException(message, throwable);
-        }
-        return StorageClientException.of(message, throwable);
     }
 
     private record AsyncRequestBodyAndCloseable(
