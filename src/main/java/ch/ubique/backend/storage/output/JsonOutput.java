@@ -24,6 +24,14 @@ public final class JsonOutput<T> extends ByteOutput implements Output {
         this.objectMapper = objectMapper;
     }
 
+    private static byte[] encode(final Object value, final ObjectMapper objectMapper) {
+        try {
+            return objectMapper.writeValueAsBytes(value);
+        } catch (final JacksonException e) {
+            throw new UncheckedException(e);
+        }
+    }
+
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
@@ -49,13 +57,5 @@ public final class JsonOutput<T> extends ByteOutput implements Output {
     @Override
     public int hashCode() {
         return new HashCodeBuilder(17, 37).append(value).append(objectMapper).toHashCode();
-    }
-
-    private static byte[] encode(final Object value, final ObjectMapper objectMapper) {
-        try {
-            return objectMapper.writeValueAsBytes(value);
-        } catch (final JacksonException e) {
-            throw new UncheckedException(e);
-        }
     }
 }

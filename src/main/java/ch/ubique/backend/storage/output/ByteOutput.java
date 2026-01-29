@@ -66,7 +66,7 @@ public sealed class ByteOutput implements Output permits JsonOutput {
             return true;
         }
 
-        if (!(o instanceof ByteOutput that)) {
+        if (!(o instanceof final ByteOutput that)) {
             return false;
         }
 

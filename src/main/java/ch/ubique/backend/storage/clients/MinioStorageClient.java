@@ -122,6 +122,23 @@ public class MinioStorageClient implements StorageClient {
         return headers;
     }
 
+    public static StorageClientException storageClientException(
+            final String message, final Throwable cause) {
+
+        if (cause instanceof ErrorResponseException
+                && cause.getMessage().contains("The specified key does not exist")) {
+            return new NonRetryableStorageClientException(message, cause);
+        }
+        if (cause instanceof InsufficientDataException
+                || cause instanceof InvalidResponseException
+                || cause instanceof ErrorResponseException
+                || cause instanceof InternalException
+                || cause instanceof ServerException) {
+            return new RetryableStorageClientException(message, cause);
+        }
+        return StorageClientException.of(message, cause);
+    }
+
     @Override
     public final void write(
             final @NotNull Output output,
@@ -230,7 +247,8 @@ public class MinioStorageClient implements StorageClient {
 
         if (!recursive && existing.stream().anyMatch(object -> !object.equals(path))) {
             throw storageClientException(
-                    MessageFormat.format("cannot delete non-empty directory. [path={0}, recursive=false]", path),
+                    MessageFormat.format(
+                            "cannot delete non-empty directory. [path={0}, recursive=false]", path),
                     new DirectoryNotEmptyException(path));
         }
 
@@ -362,22 +380,5 @@ public class MinioStorageClient implements StorageClient {
                             "failed to create bucket for [bucketName={0}]", bucketName),
                     e);
         }
-    }
-
-    public static StorageClientException storageClientException(
-            final String message, final Throwable cause) {
-
-        if (cause instanceof ErrorResponseException
-                && cause.getMessage().contains("The specified key does not exist")) {
-            return new NonRetryableStorageClientException(message, cause);
-        }
-        if (cause instanceof InsufficientDataException
-                || cause instanceof InvalidResponseException
-                || cause instanceof ErrorResponseException
-                || cause instanceof InternalException
-                || cause instanceof ServerException) {
-            return new RetryableStorageClientException(message, cause);
-        }
-        return StorageClientException.of(message, cause);
     }
 }
