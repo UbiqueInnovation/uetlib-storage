@@ -74,6 +74,90 @@ class StorageClientTest {
         MINIO_CONTAINER.stop();
     }
 
+    static Collection<StorageClient> createStorageClients() throws IOException {
+        final var tempDir = Files.createTempDirectory(null);
+        final var clients =
+                Stream.of(
+                                createLocalStorageClients(tempDir),
+                                createAzureBlobStorageClient(),
+                                createMinioAndAwsStorageClients())
+                        .flatMap(Function.identity());
+
+        return clients.flatMap(StorageClientTest::thisPlusRetryClient)
+                .flatMap(StorageClientTest::thisPlusPrefixClients)
+                .toList();
+    }
+
+    private static Stream<StorageClient> thisPlusRetryClient(final StorageClient client) {
+        final var retryTemplate =
+                new RetryTemplate(
+                        RetryPolicy.builder().maxRetries(2).delay(Duration.ofMillis(1)).build());
+        return Stream.of(client, client.retryable(retryTemplate));
+    }
+
+    private static Stream<StorageClient> thisPlusPrefixClients(final StorageClient client) {
+        return Stream.concat(
+                Stream.of(client),
+                Stream.of("foo", "bar/", "foo/bar//baz")
+                        .map(prefix -> new PrefixStorageClient(prefix, client)));
+    }
+
+    private static Stream<StorageClient> createLocalStorageClients(final Path tempDir) {
+        return Stream.of(new FileSystemStorageClient(tempDir.toString(), false));
+    }
+
+    static Stream<StorageClient> createAzureBlobStorageClient() {
+        final var mappedPort = AZURE_BLOB_STORAGE_CONTAINER.getFirstMappedPort();
+        Testcontainers.exposeHostPorts(mappedPort);
+
+        final var connectionString =
+                String.format(
+                        "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;"
+                            + "AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;"
+                            + "BlobEndpoint=http://%s:%s/devstoreaccount1;",
+                        AZURE_BLOB_STORAGE_CONTAINER.getHost(), mappedPort);
+
+        final var storageClient = new AzureBlobStorageClient("test", connectionString);
+        storageClient.createContainer("test");
+        return Stream.of(storageClient);
+    }
+
+    static Stream<StorageClient> createMinioAndAwsStorageClients() throws IOException {
+        final var mappedPort = MINIO_CONTAINER.getFirstMappedPort();
+        Testcontainers.exposeHostPorts(mappedPort);
+        final var endpoint = String.format("http://%s:%s", MINIO_CONTAINER.getHost(), mappedPort);
+        final var bucket = "test";
+        final var accessKey = "test";
+        final var secretKey = "test1234";
+
+        final var minioStorageClient =
+                new MinioStorageClient(bucket, endpoint, accessKey, secretKey, null, null);
+        minioStorageClient.createBucket(bucket);
+
+        final var awsStorageClient =
+                new AmazonS3StorageClient(
+                        bucket,
+                        null,
+                        S3AsyncClient.builder()
+                                .credentialsProvider(
+                                        StaticCredentialsProvider.create(
+                                                AwsBasicCredentials.create(accessKey, secretKey)))
+                                .region(Region.EU_CENTRAL_1)
+                                .multipartEnabled(true)
+                                .endpointOverride(URI.create(endpoint))
+                                .forcePathStyle(true)
+                                .requestChecksumCalculation(
+                                        RequestChecksumCalculation.WHEN_REQUIRED)
+                                .build());
+        return Stream.of(minioStorageClient, awsStorageClient);
+    }
+
+    @NotNull
+    private static String readStringAndClose(final InputStream storageClient) throws IOException {
+        return new String(
+                InputStreamUtils.readBytesAndClose(storageClient), StandardCharsets.UTF_8);
+    }
+
     @ParameterizedTest
     @MethodSource("createStorageClients")
     void test(final StorageClient storageClient) throws IOException {
@@ -223,89 +307,5 @@ class StorageClientTest {
 
         // Cleanup for the next run
         assertDoesNotThrow(() -> storageClient.delete("", true));
-    }
-
-    static Collection<StorageClient> createStorageClients() throws IOException {
-        final var tempDir = Files.createTempDirectory(null);
-        final var clients =
-                Stream.of(
-                                createLocalStorageClients(tempDir),
-                                createAzureBlobStorageClient(),
-                                createMinioAndAwsStorageClients())
-                        .flatMap(Function.identity());
-
-        return clients.flatMap(StorageClientTest::thisPlusRetryClient)
-                .flatMap(StorageClientTest::thisPlusPrefixClients)
-                .toList();
-    }
-
-    private static Stream<StorageClient> thisPlusRetryClient(final StorageClient client) {
-        final var retryTemplate =
-                new RetryTemplate(
-                        RetryPolicy.builder().maxRetries(2).delay(Duration.ofMillis(1)).build());
-        return Stream.of(client, client.retryable(retryTemplate));
-    }
-
-    private static Stream<StorageClient> thisPlusPrefixClients(final StorageClient client) {
-        return Stream.concat(
-                Stream.of(client),
-                Stream.of("foo", "bar/", "foo/bar//baz")
-                        .map(prefix -> new PrefixStorageClient(prefix, client)));
-    }
-
-    private static Stream<StorageClient> createLocalStorageClients(final Path tempDir) {
-        return Stream.of(new FileSystemStorageClient(tempDir.toString(), false));
-    }
-
-    static Stream<StorageClient> createAzureBlobStorageClient() {
-        final var mappedPort = AZURE_BLOB_STORAGE_CONTAINER.getFirstMappedPort();
-        Testcontainers.exposeHostPorts(mappedPort);
-
-        final var connectionString =
-                String.format(
-                        "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;"
-                                + "AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;"
-                                + "BlobEndpoint=http://%s:%s/devstoreaccount1;",
-                        AZURE_BLOB_STORAGE_CONTAINER.getHost(), mappedPort);
-
-        final var storageClient = new AzureBlobStorageClient("test", connectionString);
-        storageClient.createContainer("test");
-        return Stream.of(storageClient);
-    }
-
-    static Stream<StorageClient> createMinioAndAwsStorageClients() throws IOException {
-        final var mappedPort = MINIO_CONTAINER.getFirstMappedPort();
-        Testcontainers.exposeHostPorts(mappedPort);
-        final var endpoint = String.format("http://%s:%s", MINIO_CONTAINER.getHost(), mappedPort);
-        final var bucket = "test";
-        final var accessKey = "test";
-        final var secretKey = "test1234";
-
-        final var minioStorageClient =
-                new MinioStorageClient(bucket, endpoint, accessKey, secretKey, null, null);
-        minioStorageClient.createBucket(bucket);
-
-        final var awsStorageClient =
-                new AmazonS3StorageClient(
-                        bucket,
-                        null,
-                        S3AsyncClient.builder()
-                                .credentialsProvider(
-                                        StaticCredentialsProvider.create(
-                                                AwsBasicCredentials.create(accessKey, secretKey)))
-                                .region(Region.EU_CENTRAL_1)
-                                .multipartEnabled(true)
-                                .endpointOverride(URI.create(endpoint))
-                                .forcePathStyle(true)
-                                .requestChecksumCalculation(
-                                        RequestChecksumCalculation.WHEN_REQUIRED)
-                                .build());
-        return Stream.of(minioStorageClient, awsStorageClient);
-    }
-
-    @NotNull
-    private static String readStringAndClose(final InputStream storageClient) throws IOException {
-        return new String(
-                InputStreamUtils.readBytesAndClose(storageClient), StandardCharsets.UTF_8);
     }
 }

@@ -20,13 +20,13 @@ import java.lang.annotation.Target;
 @StorageMapping
 public @interface DeleteMapping {
 
-/**
+    /**
      * The mappingPath mapping URIs (e.g. {@code "file.json"}).
      *
      * <p>Cannot start with a `/` and startup will fail if it does.
      *
-     * <p><strong>NOTE</strong>: A handler method that is not mapped to any mappingPath explicitly is
-     * invalid.
+     * <p><strong>NOTE</strong>: A handler method that is not mapped to any mappingPath explicitly
+     * is invalid.
      */
     String path() default "";
 

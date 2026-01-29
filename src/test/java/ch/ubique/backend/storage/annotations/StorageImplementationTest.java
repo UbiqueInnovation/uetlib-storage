@@ -17,13 +17,13 @@ import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.GZipOutput;
 import ch.ubique.backend.storage.output.JsonOutput;
 
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.SerializationFeature;
-import tools.jackson.databind.json.JsonMapper;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
+
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -45,9 +45,7 @@ class StorageImplementationTest {
 
     StorageImplementationTest() throws IOException {
         objectMapper =
-                JsonMapper.builder()
-                        .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
-                        .build();
+                JsonMapper.builder().enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS).build();
         storageClient =
                 spy(new FileSystemStorageClient(Files.createTempDirectory(null).toString()));
         testStorage =
@@ -229,7 +227,10 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage interface NonStorageMappingMethodStorage is not valid: Method 'NonStorageMappingMethodStorage::mappingMethod' is not annotated by one of [@OutputMapping, @InputMapping, @DeleteMapping, @ListMapping, @ExistsMapping]");
+                "Storage interface NonStorageMappingMethodStorage is not valid: Method"
+                    + " 'NonStorageMappingMethodStorage::mappingMethod' is not annotated by one of"
+                    + " [@OutputMapping, @InputMapping, @DeleteMapping, @ListMapping,"
+                    + " @ExistsMapping]");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -240,7 +241,9 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage OutputMapping method OutputMappingMethodIllegalReturnTypeString::mappingMethod is not valid: @OutputMapping mapping method must return void");
+                "Storage OutputMapping method"
+                        + " OutputMappingMethodIllegalReturnTypeString::mappingMethod is not valid:"
+                        + " @OutputMapping mapping method must return void");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -251,7 +254,9 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage InputMapping method InputMappingMethodIllegalReturnTypeVoid::mappingMethod is not valid: @InputMapping mapping method return type must not be one of [void]");
+                "Storage InputMapping method InputMappingMethodIllegalReturnTypeVoid::mappingMethod"
+                    + " is not valid: @InputMapping mapping method return type must not be one of"
+                    + " [void]");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -262,7 +267,9 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage OutputMapping method OutputMappingMethodNoStorageObject::mappingMethod is not valid: There must be exactly one parameter annotated with @StorageObject, found 0");
+                "Storage OutputMapping method OutputMappingMethodNoStorageObject::mappingMethod is"
+                        + " not valid: There must be exactly one parameter annotated with"
+                        + " @StorageObject, found 0");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -273,7 +280,9 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage OutputMapping method OutputMappingMethodIllegalReturnTypeString::mappingMethod is not valid: @OutputMapping mapping method must return void");
+                "Storage OutputMapping method"
+                        + " OutputMappingMethodIllegalReturnTypeString::mappingMethod is not valid:"
+                        + " @OutputMapping mapping method must return void");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -284,7 +293,9 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage OutputMapping method OutputMappingMethodTooManyStorageObject::mappingMethod is not valid: There must be exactly one parameter annotated with @StorageObject, found 2");
+                "Storage OutputMapping method"
+                    + " OutputMappingMethodTooManyStorageObject::mappingMethod is not valid: There"
+                    + " must be exactly one parameter annotated with @StorageObject, found 2");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -295,7 +306,10 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage method OutputMappingMethodIllegalParameterTypeObject::mappingMethod is not valid: Method parameter 'parameter' must either be one of type '[OutputMetaData, ObjectMapper]' or be annotated with one of [@StorageObject, @StoragePathVariable]");
+                "Storage method OutputMappingMethodIllegalParameterTypeObject::mappingMethod is not"
+                        + " valid: Method parameter 'parameter' must either be one of type"
+                        + " '[OutputMetaData, ObjectMapper]' or be annotated with one of"
+                        + " [@StorageObject, @StoragePathVariable]");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -308,7 +322,10 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage OutputMapping method OutputMappingMethodIllegalParameterAnnotationTypeObject::mappingMethod is not valid: There must be exactly one parameter annotated with @StorageObject, found 0");
+                "Storage OutputMapping method"
+                    + " OutputMappingMethodIllegalParameterAnnotationTypeObject::mappingMethod is"
+                    + " not valid: There must be exactly one parameter annotated with"
+                    + " @StorageObject, found 0");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -319,7 +336,9 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage method OutputMappingTooManyObjectMapper::mappingMethod is not valid: There must be at most one parameter of type @class tools.jackson.databind.ObjectMapper, found 2");
+                "Storage method OutputMappingTooManyObjectMapper::mappingMethod is not valid: There"
+                        + " must be at most one parameter of type @class"
+                        + " tools.jackson.databind.ObjectMapper, found 2");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -330,7 +349,9 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage method OutputMappingTooManyOutputMetaData::mappingMethod is not valid: There must be at most one parameter of type @class ch.ubique.backend.storage.OutputMetaData, found 2");
+                "Storage method OutputMappingTooManyOutputMetaData::mappingMethod is not valid:"
+                        + " There must be at most one parameter of type @class"
+                        + " ch.ubique.backend.storage.OutputMetaData, found 2");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -341,7 +362,9 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage ListMapping method ListMappingIllegalReturnTypeIterable::mappingMethod is not valid: @ListMapping mapping method return type must be one of [Collection, List, Set, Stream]");
+                "Storage ListMapping method ListMappingIllegalReturnTypeIterable::mappingMethod is"
+                        + " not valid: @ListMapping mapping method return type must be one of"
+                        + " [Collection, List, Set, Stream]");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -352,7 +375,9 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage ListMapping method ListMappingIllegalReturnTypeHashSet::mappingMethod is not valid: @ListMapping mapping method return type must be one of [Collection, List, Set, Stream]");
+                "Storage ListMapping method ListMappingIllegalReturnTypeHashSet::mappingMethod is"
+                        + " not valid: @ListMapping mapping method return type must be one of"
+                        + " [Collection, List, Set, Stream]");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -363,7 +388,9 @@ class StorageImplementationTest {
                                 .objectMapper(objectMapper)
                                 .basePath("storage")
                                 .build(),
-                "Storage ExistsMapping method ExistsMappingIllegalReturnTypeBoolean::mappingMethod is not valid: @ExistsMapping mapping method return type must be one of [boolean]");
+                "Storage ExistsMapping method ExistsMappingIllegalReturnTypeBoolean::mappingMethod"
+                        + " is not valid: @ExistsMapping mapping method return type must be one of"
+                        + " [boolean]");
     }
 
     interface NonStorageMappingMethodStorage {

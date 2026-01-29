@@ -36,6 +36,11 @@ public class PrefixStorageClient implements StorageClient {
         }
     }
 
+    private static String normalizePrefix(final String pathPrefix) {
+        final var clean = Path.of(pathPrefix).normalize().toString();
+        return clean + "/";
+    }
+
     @Override
     public StorageClient withoutRetry() {
         return new PrefixStorageClient(pathPrefix, storageClient.withoutRetry());
@@ -93,11 +98,6 @@ public class PrefixStorageClient implements StorageClient {
 
     private OutputWithPath prefixOutputPath(final OutputWithPath outputWithPath) {
         return new OutputWithPath(outputWithPath.output(), prefixedPath(outputWithPath.path()));
-    }
-
-    private static String normalizePrefix(final String pathPrefix) {
-        final var clean = Path.of(pathPrefix).normalize().toString();
-        return clean + "/";
     }
 
     public String prefixedPath(final String path) {

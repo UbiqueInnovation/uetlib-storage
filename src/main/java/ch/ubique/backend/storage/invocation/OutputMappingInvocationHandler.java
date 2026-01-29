@@ -9,9 +9,9 @@ import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.output.*;
 
-import tools.jackson.databind.ObjectMapper;
-
 import org.slf4j.Logger;
+
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.File;
 import java.io.InputStream;

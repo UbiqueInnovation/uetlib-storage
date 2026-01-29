@@ -9,6 +9,7 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import org.jspecify.annotations.NonNull;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -16,10 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-public final class FileOutput implements Output {
-
-    private final File file;
-    private final String contentType;
+public record FileOutput(File file, String contentType) implements Output {
 
     public FileOutput(final File file) {
         this(file, null);
@@ -28,10 +26,6 @@ public final class FileOutput implements Output {
     public FileOutput(final File file, @Nullable final String contentType) {
         this.file = file;
         this.contentType = StringUtils.requireNonBlankElse(contentType, "application/octet-stream");
-    }
-
-    public File file() {
-        return file;
     }
 
     @Override
@@ -45,12 +39,7 @@ public final class FileOutput implements Output {
     }
 
     @Override
-    public String contentType() {
-        return contentType;
-    }
-
-    @Override
-    public String toString() {
+    public @NonNull String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
                 .append("contentType", contentType)
                 .append("file", file.getAbsolutePath())
@@ -72,7 +61,7 @@ public final class FileOutput implements Output {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof FileOutput that)) {
+        if (!(o instanceof final FileOutput that)) {
             return false;
         }
         return new EqualsBuilder()
