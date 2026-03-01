@@ -15,9 +15,9 @@
     <packaging>jar</packaging>
 
     <properties>
-        <uetlib-core.version>2.0.1</uetlib-core.version>
-        <uetlib-test.version>2.0.0</uetlib-test.version>
-        <uetlib-testcontainers.version>2.0.0</uetlib-testcontainers.version>
+        <uetlib-core.version>2.0.2</uetlib-core.version>
+        <uetlib-test.version>2.0.1</uetlib-test.version>
+        <uetlib-testcontainers.version>2.0.1</uetlib-testcontainers.version>
     </properties>
 
     <dependencies>
