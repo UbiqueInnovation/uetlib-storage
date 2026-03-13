@@ -12,6 +12,7 @@ import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.exception.NonRetryableStorageClientException;
 import ch.ubique.backend.storage.exception.RetryableStorageClientException;
 import ch.ubique.backend.storage.exception.StorageClientException;
+import ch.ubique.backend.storage.output.FileOutput;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
@@ -35,6 +36,7 @@ import jakarta.validation.constraints.NotNull;
 import okhttp3.OkHttpClient;
 
 import org.apache.commons.lang3.NotImplementedException;
+import org.jspecify.annotations.NonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -145,19 +147,17 @@ public class MinioStorageClient implements StorageClient {
             final @NotNull String path,
             @Nullable final OutputMetaData outputMetaData)
             throws StorageClientException {
-        final var metaData =
-                OutputMetaData.resolveOutputMetaData(
-                        outputMetaData, outputMetaDataProvider, output);
 
+        if (output instanceof final FileOutput file) {
+            writeFile(file, path, outputMetaData);
+            return;
+        }
+
+        final var metaData = resolveMetaData(output, outputMetaData);
         try (final var inputStream = output.read()) {
 
             final var contentType = Objects.requireNonNull(output.contentType());
-
-            // 8MiB (default in aws s3 cli, must be between 5MiB to 5GiB)
-            // CAUTION: The upload is restricted to 10000 * partSize = 80GiB at the moment. We might
-            // have to increase this at some point for unknown contentLength
-            final var fallbackPartSize = 8 * 1024 * 1024;
-            final var partSize = output.contentLength() > 0 ? -1 : fallbackPartSize;
+            final var contentLength = output.contentLength();
 
             final var putObjectArgs =
                     PutObjectArgs.builder()
@@ -165,7 +165,7 @@ public class MinioStorageClient implements StorageClient {
                             .object(path)
                             .contentType(contentType)
                             .headers(createHeaders(output, metaData))
-                            .stream(inputStream, output.contentLength(), partSize)
+                            .stream(inputStream, contentLength, partSize(contentLength))
                             .userMetadata(createUserMetadata(metaData))
                             .build();
             minioClient.putObject(putObjectArgs);
@@ -184,6 +184,78 @@ public class MinioStorageClient implements StorageClient {
                             path, outputMetaData, output),
                     e);
         }
+    }
+
+    private void writeFile(
+            final FileOutput output, final String path, final OutputMetaData outputMetaData)
+            throws StorageClientException {
+
+        final var metaData = resolveMetaData(output, outputMetaData);
+        try {
+            final var uploadObjectArgs =
+                    UploadObjectArgs.builder()
+                            .bucket(bucket)
+                            .object(path)
+                            .contentType(Objects.requireNonNull(output.contentType()))
+                            .headers(createHeaders(output, metaData))
+                            .filename(
+                                    output.file().toPath().toString(),
+                                    partSize(output.contentLength()))
+                            .userMetadata(createUserMetadata(metaData))
+                            .build();
+
+            minioClient.uploadObject(uploadObjectArgs);
+        } catch (final ErrorResponseException
+                | InsufficientDataException
+                | InternalException
+                | InvalidKeyException
+                | InvalidResponseException
+                | NoSuchAlgorithmException
+                | ServerException
+                | XmlParserException
+                | IOException e) {
+            throw storageClientException(
+                    MessageFormat.format(
+                            "failed to write for [path={0}, outputMetaData={1}, output={2}]",
+                            path, outputMetaData, output),
+                    e);
+        }
+    }
+
+    /**
+     * Calculates a good part size for multipart uploads based on the content length. If the content
+     * length is unknown (<= 0), a default part size of 8MiB is returned.
+     *
+     * <p>This method determines an appropriate part size for splitting large objects into multiple
+     * parts during upload. The algorithm aims for approximately 200 parts and rounds the result up
+     * to the nearest power of two, resulting in something between 100 and 200 parts.
+     *
+     * @param contentLength the total size of the content to be uploaded in bytes. Can be -1 if the
+     *     content length is unknown
+     * @return the calculated part size in bytes, guaranteed to be between {@link
+     *     ObjectWriteArgs#MIN_MULTIPART_SIZE} and {@link ObjectWriteArgs#MAX_PART_SIZE}
+     */
+    static long partSize(final long contentLength) {
+        if (contentLength <= 0) {
+            // 8MiB (default in aws s3 cli, must be between 5MiB to 5GiB)
+            // CAUTION: The upload is restricted to 10000 * partSize = 80GiB at the moment. We might
+            // have to increase this at some point for unknown contentLength
+            return 8 * 1024 * 1024L;
+        }
+
+        final var targetNumberOfParts = 200;
+
+        final var rawPartSize = (long) Math.ceil((double) contentLength / targetNumberOfParts);
+        // Round up to power of two
+        final var alignedPartSize = Long.highestOneBit(rawPartSize - 1) << 1;
+
+        return Math.clamp(
+                alignedPartSize, ObjectWriteArgs.MIN_MULTIPART_SIZE, ObjectWriteArgs.MAX_PART_SIZE);
+    }
+
+    private @NonNull OutputMetaData resolveMetaData(
+            final Output output, final OutputMetaData outputMetaData) {
+        return OutputMetaData.resolveOutputMetaData(outputMetaData, outputMetaDataProvider, output);
     }
 
     private Map<String, String> createUserMetadata(final OutputMetaData outputMetaData) {
