@@ -1,7 +1,6 @@
 package ch.ubique.backend.storage.clients;
 
 import ch.ubique.backend.core.executor.VirtualThreadUtils;
-import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
@@ -11,10 +10,8 @@ import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
 
 import com.azure.core.http.HttpClient;
-import com.azure.core.http.HttpHeaderName;
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.core.util.Context;
-import com.azure.core.util.Header;
 import com.azure.core.util.HttpClientOptions;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
@@ -28,7 +25,6 @@ import com.azure.storage.common.policy.RequestRetryOptions;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLDecoder;
@@ -147,36 +143,29 @@ public class AzureBlobStorageClient implements StorageClient {
     }
 
     @Override
+    @SuppressWarnings("java:S2095")
     public InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
             throws StorageClientException {
-        try (final var outputStream = new ByteArrayOutputStream()) {
-            final var blobDownloadResponse = downloadStreamWithResponse(path, outputStream);
-            final var inputStream = InputStreamUtils.pipeOutputToInputStream(outputStream);
-
+        try {
+            final var inputStream = blobContainerClient.getBlobClient(path).openInputStream();
             if (doUncompressIfNeeded) {
-                final var contentEncoding =
-                        Optional.ofNullable(
-                                        blobDownloadResponse
-                                                .getHeaders()
-                                                .get(HttpHeaderName.CONTENT_ENCODING))
-                                .map(Header::getValue)
-                                .orElse(null);
+                final var contentEncoding = getProperties(path).getContentEncoding();
                 return CompressionUtils.tryToUncompress(inputStream, contentEncoding, path);
             }
-
             return inputStream;
-        } catch (final IOException e) {
+        } catch (final Exception e) {
             throw StorageClientException.of(
                     MessageFormat.format("failed to read for [path={0}]", path), e);
         }
     }
 
-    private BlobDownloadResponse downloadStreamWithResponse(
-            @NotNull final String path, final ByteArrayOutputStream outputStream) {
-        return blobContainerClient
-                .getBlobClient(path)
-                .downloadStreamWithResponse(
-                        outputStream, null, null, null, false, null, Context.NONE);
+    private BlobProperties getProperties(final String path) throws StorageClientException {
+        try {
+            return blobContainerClient.getBlobClient(path).getProperties();
+        } catch (final Exception e) {
+            throw StorageClientException.of(
+                    MessageFormat.format("could not read properties for [path={0}]", path), e);
+        }
     }
 
     @Override

@@ -19,6 +19,9 @@ public abstract sealed class StorageClientException extends IOException
     }
 
     public static StorageClientException of(final String message, final Throwable cause) {
+        if (cause instanceof final StorageClientException storageClientException) {
+            return storageClientException;
+        }
         final var rootCause = ExceptionUtils.getRootCause(ExceptionUtils.getRootCause(cause));
         if (isRetryable(cause) || isRetryable(rootCause)) {
             return new RetryableStorageClientException(message, cause);
