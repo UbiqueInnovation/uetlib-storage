@@ -81,12 +81,8 @@ public class ImageStorageService {
     public BlurHashRepresentation processImageFromOriginal(
             final Function<ImageVariant, String> generatePath, final MediaType mediaType)
             throws IOException, ImageProcessingException {
-        final var originalImageInputStream =
-                storageClient.read(generatePath.apply(ImageVariant.ORIGINAL));
-        final var originalImageBytes = originalImageInputStream.readAllBytes();
-        // InputStream::readAllBytes does not close the imageInputStream
-        originalImageInputStream.close();
-
+        final var originalImageBytes =
+                downloadBlobAsBytes(generatePath.apply(ImageVariant.ORIGINAL));
         return processImageFromOriginalBytes(generatePath, originalImageBytes, mediaType);
     }
 
