@@ -2,12 +2,22 @@ package ch.ubique.backend.storage.images;
 
 public enum ImageVariant {
     ORIGINAL,
-    THUMBNAIL,
-    HIRES;
+    THUMBNAIL(320),
+    HIRES(1200);
 
     public final String key;
+    private final Integer defaultSize;
 
     ImageVariant() {
-        key = name().toLowerCase();
+        this(null);
+    }
+
+    ImageVariant(final Integer defaultSize) {
+        this.key = name().toLowerCase();
+        this.defaultSize = defaultSize;
+    }
+
+    public Integer getDefaultSize() {
+        return defaultSize;
     }
 }
