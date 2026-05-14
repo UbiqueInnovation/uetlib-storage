@@ -58,6 +58,16 @@ public class ImageStorageService {
     }
 
     public void uploadOriginalImage(
+            final byte[] imageBytes,
+            final Function<ImageVariant, String> generatePath,
+            final MediaType mediaType)
+            throws IOException {
+        storageClient.write(
+                new ByteOutput(imageBytes, mediaType.toString()),
+                generatePath.apply(ImageVariant.ORIGINAL));
+    }
+
+    public void uploadOriginalImage(
             final InputStream imageInputStream,
             final Function<ImageVariant, String> generatePath,
             final MediaType mediaType)
