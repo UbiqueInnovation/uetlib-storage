@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 2.0.4
+
+### Improvements (Image Storage/Processing)
+
+- Image size is now directly linked to image variant (can be read from outside)
+- Added original image upload method that takes byte[]
+- Added method overloads for processing that take image bytes instead of input stream (makes retry possible)
+- Image processing option to convert the processed images to webp
+
 ## 2.0.0
 
 ### Breaking Changes
@@ -105,5 +114,3 @@ Make sure to use the correct header date formatter for `expires`, `best-before`,
 ### Breaking Changes
 
 - `OutputMetaData` no longer has a constructor that accepts `org.springframework.http.CacheControl`.
-
-
