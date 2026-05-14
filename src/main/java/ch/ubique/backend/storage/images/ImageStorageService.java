@@ -87,6 +87,15 @@ public class ImageStorageService {
         // InputStream::readAllBytes does not close the imageInputStream
         originalImageInputStream.close();
 
+        return processImageFromOriginalBytes(generatePath, originalImageBytes, mediaType);
+    }
+
+    @NotNull
+    public BlurHashRepresentation processImageFromOriginalBytes(
+            final Function<ImageVariant, String> generatePath,
+            final byte[] originalImageBytes,
+            final MediaType mediaType)
+            throws IOException, ImageProcessingException {
         final var hires =
                 ImageUtils.scaleAndFlush(
                         ImageUtils.imageFromBytes(originalImageBytes),
