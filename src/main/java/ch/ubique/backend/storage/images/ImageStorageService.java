@@ -78,13 +78,16 @@ public class ImageStorageService {
         originalImageInputStream.close();
 
         final var hires =
-                ImageUtils.scaleAndFlush(ImageUtils.imageFromBytes(originalImageBytes), 1200);
+                ImageUtils.scaleAndFlush(
+                        ImageUtils.imageFromBytes(originalImageBytes),
+                        ImageVariant.HIRES.getDefaultSize());
         storageClient.write(
                 new ByteOutput(
                         ImageUtils.imageToBytes(hires, mediaType.subtype()), mediaType.toString()),
                 generatePath.apply(ImageVariant.HIRES));
 
-        final var thumbnail = ImageUtils.scaleAndFlush(hires, 320);
+        final var thumbnail =
+                ImageUtils.scaleAndFlush(hires, ImageVariant.THUMBNAIL.getDefaultSize());
         storageClient.write(
                 new ByteOutput(
                         ImageUtils.imageToBytes(thumbnail, mediaType.subtype()),
