@@ -3,6 +3,7 @@ package ch.ubique.backend.storage.images;
 import ch.ubique.backend.image.blurhash.BlurHashClient;
 import ch.ubique.backend.image.blurhash.BlurHashRepresentation;
 import ch.ubique.backend.image.util.ImageUtils;
+import ch.ubique.backend.image.webp.Webp;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.ByteOutput;
@@ -87,26 +88,59 @@ public class ImageStorageService {
     }
 
     @NotNull
+    public BlurHashRepresentation processImageFromOriginalConvertToWebp(
+            final Function<ImageVariant, String> generatePath, final MediaType mediaType)
+            throws IOException, ImageProcessingException {
+        final var originalImageBytes =
+                downloadBlobAsBytes(generatePath.apply(ImageVariant.ORIGINAL));
+        return processImageFromOriginalBytesConvertToWebp(generatePath, originalImageBytes);
+    }
+
+    @NotNull
     public BlurHashRepresentation processImageFromOriginalBytes(
             final Function<ImageVariant, String> generatePath,
             final byte[] originalImageBytes,
             final MediaType mediaType)
             throws IOException, ImageProcessingException {
+        return processImageFromOriginalBytes(generatePath, originalImageBytes, mediaType, false);
+    }
+
+    @NotNull
+    public BlurHashRepresentation processImageFromOriginalBytesConvertToWebp(
+            final Function<ImageVariant, String> generatePath, final byte[] originalImageBytes)
+            throws IOException, ImageProcessingException {
+        return processImageFromOriginalBytes(
+                generatePath, originalImageBytes, MediaType.WEBP, true);
+    }
+
+    @NotNull
+    private BlurHashRepresentation processImageFromOriginalBytes(
+            final Function<ImageVariant, String> generatePath,
+            final byte[] originalImageBytes,
+            final MediaType mediaType,
+            final boolean convertToWebp)
+            throws IOException, ImageProcessingException {
         final var hires =
                 ImageUtils.scaleAndFlush(
                         ImageUtils.imageFromBytes(originalImageBytes),
                         ImageVariant.HIRES.getDefaultSize());
+
+        final byte[] hiresBytes =
+                convertToWebp
+                        ? Webp.lossy(80).encode(hires)
+                        : ImageUtils.imageToBytes(hires, mediaType.subtype());
         storageClient.write(
-                new ByteOutput(
-                        ImageUtils.imageToBytes(hires, mediaType.subtype()), mediaType.toString()),
+                new ByteOutput(hiresBytes, mediaType.toString()),
                 generatePath.apply(ImageVariant.HIRES));
 
         final var thumbnail =
                 ImageUtils.scaleAndFlush(hires, ImageVariant.THUMBNAIL.getDefaultSize());
+        final byte[] thumbnailBytes =
+                convertToWebp
+                        ? Webp.lossy(80).encode(thumbnail)
+                        : ImageUtils.imageToBytes(thumbnail, mediaType.subtype());
         storageClient.write(
-                new ByteOutput(
-                        ImageUtils.imageToBytes(thumbnail, mediaType.subtype()),
-                        mediaType.toString()),
+                new ByteOutput(thumbnailBytes, mediaType.toString()),
                 generatePath.apply(ImageVariant.THUMBNAIL));
 
         final var blurHashRepresentation =
