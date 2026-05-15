@@ -364,24 +364,36 @@ public class AmazonS3StorageClient implements StorageClient {
     public Collection<String> list(@NotNull final String path, final boolean recursive)
             throws StorageClientException {
         try {
-            final var builder = ListObjectsV2Request.builder().bucket(bucket).prefix(path);
+            final var keys = new LinkedHashSet<String>();
 
-            // If not recursive, group by the common prefix
-            if (!recursive) {
-                builder.delimiter("/");
-            }
+            String continuationToken = null;
+            do {
+                final var builder =
+                        ListObjectsV2Request.builder()
+                                .bucket(bucket)
+                                .prefix(path)
+                                .continuationToken(continuationToken);
 
-            final var listObjectsV2Request = builder.build();
-            final var listObjectsV2Response =
-                    s3AsyncClient.listObjectsV2(listObjectsV2Request).join();
+                // If not recursive, group by the common prefix
+                if (!recursive) {
+                    builder.delimiter("/");
+                }
 
-            final var keys = new HashSet<String>();
-            listObjectsV2Response.contents().forEach(s3Object -> keys.add(s3Object.key()));
+                final var listObjectsV2Response =
+                        s3AsyncClient.listObjectsV2(builder.build()).join();
 
-            // If not recursive, also list "folders" (i.e. common prefixes)
-            if (!recursive) {
-                listObjectsV2Response.commonPrefixes().forEach(prefix -> keys.add(prefix.prefix()));
-            }
+                listObjectsV2Response.contents().forEach(s3Object -> keys.add(s3Object.key()));
+
+                // If not recursive, also list "folders" (i.e. common prefixes)
+                if (!recursive) {
+                    listObjectsV2Response
+                            .commonPrefixes()
+                            .forEach(prefix -> keys.add(prefix.prefix()));
+                }
+
+                continuationToken = listObjectsV2Response.nextContinuationToken();
+            } while (continuationToken != null);
+
             return keys;
         } catch (final CancellationException | CompletionException e) {
             throw toStorageClientException(
