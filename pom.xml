@@ -18,7 +18,7 @@
         <uetlib-core.version>2.2.2</uetlib-core.version>
         <uetlib-test.version>2.0.1</uetlib-test.version>
         <uetlib-testcontainers.version>2.0.1</uetlib-testcontainers.version>
-        <uetlib-webp.version>0.0.9</uetlib-webp.version>
+        <uetlib-webp.version>0.0.10</uetlib-webp.version>
     </properties>
 
     <dependencies>
