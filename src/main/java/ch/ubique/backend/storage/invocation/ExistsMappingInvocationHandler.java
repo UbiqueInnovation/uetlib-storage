@@ -6,6 +6,7 @@ import static ch.ubique.backend.storage.logger.LogAtNullableLevel.atLevel;
 import ch.ubique.backend.core.utils.ArrayUtils;
 import ch.ubique.backend.storage.annotations.ExistsMapping;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.lang.reflect.Method;
@@ -22,7 +23,7 @@ public class ExistsMappingInvocationHandler implements StorageMappingInvocationH
     public Object invoke(
             final StorageMappingInvocationProperties storageMappingInvocationProperties,
             final Method method,
-            final Object[] args)
+            final Object @Nullable [] args)
             throws Throwable {
         final var storageClient = storageMappingInvocationProperties.storageClient();
         final var existsMapping = findAnnotation(method, ExistsMapping.class);

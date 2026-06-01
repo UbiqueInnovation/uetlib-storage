@@ -5,7 +5,7 @@ import static java.util.Objects.requireNonNullElse;
 
 import io.minio.messages.CannedAcl;
 
-import jakarta.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.Duration;
@@ -16,13 +16,13 @@ public final class OutputMetaDataProvider {
     private final @NotNull Duration maxAge;
     private final @NotNull Duration sMaxAge;
 
-    private Duration expiresOffset;
-    private Duration bestBeforeOffset;
-    private Duration nextRefreshOffset;
-    private Duration backoff;
+    private @Nullable Duration expiresOffset;
+    private @Nullable Duration bestBeforeOffset;
+    private @Nullable Duration nextRefreshOffset;
+    private @Nullable Duration backoff;
 
-    private CannedAcl accessPolicy;
-    private String customAccessPolicy;
+    private @Nullable CannedAcl accessPolicy;
+    private @Nullable String customAccessPolicy;
 
     /**
      * @param maxAge Duration must not be null

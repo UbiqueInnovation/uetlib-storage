@@ -2,8 +2,9 @@ package ch.ubique.backend.storage.utils;
 
 import ch.ubique.backend.core.utils.InputStreamUtils;
 
-import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
+
+import org.jspecify.annotations.Nullable;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;

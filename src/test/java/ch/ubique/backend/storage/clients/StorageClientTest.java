@@ -47,7 +47,18 @@ class StorageClientTest {
     private static final GenericContainer<?> AZURE_BLOB_STORAGE_CONTAINER =
             new GenericContainer<>("mcr.microsoft.com/azure-storage/azurite")
                     .withImagePullPolicy(PullPolicy.ageBased(Duration.ofDays(30)))
-                    .withExposedPorts(10000);
+                    .withExposedPorts(10000)
+                    .withCommand(
+                            "azurite",
+                            "-l",
+                            "/data",
+                            "--blobHost",
+                            "0.0.0.0",
+                            "--queueHost",
+                            "0.0.0.0",
+                            "--tableHost",
+                            "0.0.0.0",
+                            "--skipApiVersionCheck");
 
     private static final GenericContainer<?> MINIO_CONTAINER =
             new GenericContainer<>("minio/minio")
@@ -113,8 +124,8 @@ class StorageClientTest {
         final var connectionString =
                 String.format(
                         "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;"
-                            + "AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;"
-                            + "BlobEndpoint=http://%s:%s/devstoreaccount1;",
+                                + "AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;"
+                                + "BlobEndpoint=http://%s:%s/devstoreaccount1;",
                         AZURE_BLOB_STORAGE_CONTAINER.getHost(), mappedPort);
 
         final var storageClient = new AzureBlobStorageClient("test", connectionString);

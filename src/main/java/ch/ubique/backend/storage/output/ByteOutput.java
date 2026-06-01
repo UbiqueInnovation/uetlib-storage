@@ -1,14 +1,15 @@
 package ch.ubique.backend.storage.output;
 
+import static java.util.Objects.requireNonNull;
+
 import ch.ubique.backend.core.file.ByteFile;
 import ch.ubique.backend.core.utils.StringUtils;
-
-import jakarta.annotation.Nullable;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import org.jspecify.annotations.Nullable;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -25,7 +26,7 @@ public sealed class ByteOutput implements Output permits JsonOutput {
     }
 
     public ByteOutput(final ByteFile byteFile) {
-        this(byteFile.getBytes(), byteFile.getContentType());
+        this(requireNonNull(byteFile.getBytes()), byteFile.getContentType());
     }
 
     public ByteOutput(final byte[] value, @Nullable final String contentType) {

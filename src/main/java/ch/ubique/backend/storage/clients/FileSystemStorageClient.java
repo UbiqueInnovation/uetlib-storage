@@ -7,7 +7,8 @@ import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
 
-import jakarta.annotation.Nullable;
+import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.io.FileUtils;
@@ -32,6 +33,7 @@ import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.time.OffsetDateTime;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -61,7 +63,7 @@ public class FileSystemStorageClient implements StorageClient {
     }
 
     private static Collection<File> listFilesWithPrefix(final Path completePath) {
-        final var directory = completePath.getParent();
+        final var directory = Objects.requireNonNull(completePath.getParent());
         final var prefix = completePath.getFileName().toString();
         return FileUtils.listFiles(directory.toFile(), new PrefixFileFilter(prefix), null);
     }

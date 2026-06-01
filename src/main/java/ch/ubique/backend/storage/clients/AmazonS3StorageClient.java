@@ -16,11 +16,11 @@ import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
 
-import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.lang3.NotImplementedException;
+import org.jspecify.annotations.Nullable;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -174,7 +174,10 @@ public class AmazonS3StorageClient implements StorageClient {
 
         // Unwrap the cause of the CompletionException
         if (throwable instanceof final CompletionException e) {
-            return toStorageClientException(message, e.getCause(), canRetry);
+            final var cause = e.getCause();
+            if (cause != null) {
+                return toStorageClientException(message, cause, canRetry);
+            }
         }
 
         // SdkClientException is retryable -> can be retried

@@ -2,7 +2,7 @@ package ch.ubique.backend.storage.output;
 
 import ch.ubique.backend.core.utils.StringUtils;
 
-import jakarta.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;

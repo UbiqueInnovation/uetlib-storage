@@ -86,7 +86,7 @@ public class RetryStorageClient implements StorageClient {
         try {
             return retryTemplate.execute(() -> storageClient.read(path, doUncompressIfNeeded));
         } catch (final RetryException e) {
-            throw StorageClientException.of(e.getCause().getMessage(), e.getCause());
+            throw createStorageClientException(e);
         }
     }
 
@@ -96,7 +96,7 @@ public class RetryStorageClient implements StorageClient {
         try {
             return retryTemplate.execute(() -> storageClient.delete(path, recursive));
         } catch (final RetryException e) {
-            throw StorageClientException.of(e.getCause().getMessage(), e.getCause());
+            throw createStorageClientException(e);
         }
     }
 
@@ -106,7 +106,7 @@ public class RetryStorageClient implements StorageClient {
         try {
             return retryTemplate.execute(() -> storageClient.list(path, recursive));
         } catch (final RetryException e) {
-            throw StorageClientException.of(e.getCause().getMessage(), e.getCause());
+            throw createStorageClientException(e);
         }
     }
 
@@ -115,7 +115,7 @@ public class RetryStorageClient implements StorageClient {
         try {
             return retryTemplate.execute(() -> storageClient.exists(path));
         } catch (final RetryException e) {
-            throw StorageClientException.of(e.getCause().getMessage(), e.getCause());
+            throw createStorageClientException(e);
         }
     }
 
@@ -125,7 +125,7 @@ public class RetryStorageClient implements StorageClient {
         try {
             return retryTemplate.execute(() -> storageClient.getSignedUrl(path, expiry));
         } catch (final RetryException e) {
-            throw StorageClientException.of(e.getCause().getMessage(), e.getCause());
+            throw createStorageClientException(e);
         }
     }
 
@@ -134,7 +134,7 @@ public class RetryStorageClient implements StorageClient {
         try {
             return retryTemplate.execute(() -> storageClient.getUrl(path));
         } catch (final RetryException e) {
-            throw StorageClientException.of(e.getCause().getMessage(), e.getCause());
+            throw createStorageClientException(e);
         }
     }
 
@@ -147,7 +147,7 @@ public class RetryStorageClient implements StorageClient {
                         return null;
                     });
         } catch (final RetryException e) {
-            throw StorageClientException.of(e.getCause().getMessage(), e.getCause());
+            throw createStorageClientException(e);
         }
     }
 
@@ -156,5 +156,12 @@ public class RetryStorageClient implements StorageClient {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
                 .append("storageClient", storageClient)
                 .toString();
+    }
+
+    private static StorageClientException createStorageClientException(
+            final RetryException retryException) {
+        final var cause = requireNonNull(retryException.getCause());
+        final var message = requireNonNullElse(cause.getMessage(), cause.toString());
+        return StorageClientException.of(message, cause);
     }
 }

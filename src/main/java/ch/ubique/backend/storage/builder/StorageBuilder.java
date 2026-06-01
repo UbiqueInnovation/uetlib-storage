@@ -5,24 +5,22 @@ import static ch.ubique.backend.storage.builder.StorageBuilderUtil.getStorageMet
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.invocation.*;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jspecify.annotations.Nullable;
 
 import tools.jackson.databind.ObjectMapper;
 
 import java.lang.reflect.Proxy;
+import java.util.Objects;
 
 public final class StorageBuilder<T> {
 
-    private static final Logger logger = LoggerFactory.getLogger(StorageBuilder.class);
-
     private final Class<T> type;
 
-    private ClassLoader classLoader;
-    private StorageClient storageClient;
-    private ObjectMapper objectMapper;
-    private String basePath;
-    private String documentationBaseUrl;
+    private @Nullable ClassLoader classLoader;
+    private @Nullable StorageClient storageClient;
+    private @Nullable ObjectMapper objectMapper;
+    private @Nullable String basePath;
+    private @Nullable String documentationBaseUrl;
 
     private StorageBuilder(final Class<T> type) {
         this.type = type;
@@ -60,7 +58,10 @@ public final class StorageBuilder<T> {
     public T build() {
         final var storageInvocationProperties =
                 new StorageMappingInvocationProperties(
-                        storageClient, objectMapper, basePath, documentationBaseUrl);
+                        Objects.requireNonNull(storageClient),
+                        Objects.requireNonNull(objectMapper),
+                        basePath,
+                        documentationBaseUrl);
 
         final var storageMethodInvocationByMethodName =
                 getStorageMethodInvocationByMethodName(type);

@@ -9,6 +9,7 @@ import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.annotations.OutputMapping;
 import ch.ubique.backend.storage.output.*;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 import tools.jackson.databind.ObjectMapper;
@@ -17,6 +18,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Objects;
 
 public class OutputMappingInvocationHandler implements StorageMappingInvocationHandler {
 
@@ -26,7 +28,7 @@ public class OutputMappingInvocationHandler implements StorageMappingInvocationH
         this.logger = logger;
     }
 
-    private static OutputMetaData getOutputMetaData(final Object[] allArguments) {
+    private static @Nullable OutputMetaData getOutputMetaData(final Object[] allArguments) {
         return Arrays.stream(allArguments)
                 .filter(OutputMetaData.class::isInstance)
                 .map(OutputMetaData.class::cast)
@@ -63,7 +65,7 @@ public class OutputMappingInvocationHandler implements StorageMappingInvocationH
     public Object invoke(
             final StorageMappingInvocationProperties storageMappingInvocationProperties,
             final Method method,
-            final Object[] args)
+            final Object @Nullable [] args)
             throws Throwable {
         final var storageClient = storageMappingInvocationProperties.storageClient();
         final var objectMapper = storageMappingInvocationProperties.objectMapper();
@@ -71,7 +73,8 @@ public class OutputMappingInvocationHandler implements StorageMappingInvocationH
         final var outputMapping = findAnnotation(method, OutputMapping.class);
         final var level = ArrayUtils.singletonOrNull(outputMapping.logLevel());
 
-        final var output = getOutput(objectMapper, outputMapping, method, args);
+        final var output =
+                getOutput(objectMapper, outputMapping, method, Objects.requireNonNull(args));
 
         final var basePath = storageMappingInvocationProperties.basePath();
         final var path =

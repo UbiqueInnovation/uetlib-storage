@@ -17,7 +17,7 @@ import com.google.common.net.HttpHeaders;
 
 import io.minio.messages.CannedAcl;
 
-import jakarta.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 import jakarta.validation.ValidationException;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -44,13 +44,13 @@ public final class OutputMetaData {
 
     @NotBlank private final String cacheControl;
 
-    private Instant expires;
-    private Instant bestBefore;
-    private Instant nextRefresh;
-    private Duration backoff;
-    private Long contentLengthUncompressed;
-    private CannedAcl accessPolicy;
-    private String customAccessPolicy;
+    @Nullable private Instant expires;
+    @Nullable private Instant bestBefore;
+    @Nullable private Instant nextRefresh;
+    @Nullable private Duration backoff;
+    @Nullable private Long contentLengthUncompressed;
+    @Nullable private CannedAcl accessPolicy;
+    @Nullable private String customAccessPolicy;
 
     /**
      * @param cacheControl must not be blank. You can create a valid value using e.g.
@@ -103,8 +103,8 @@ public final class OutputMetaData {
     @Contract("!null, _ -> param1; null, !null -> new")
     @NotNull
     public static OutputMetaData resolveOutputMetaData(
-            final OutputMetaData outputMetaData,
-            final OutputMetaDataProvider outputMetaDataProvider) {
+            @Nullable final OutputMetaData outputMetaData,
+            @Nullable final OutputMetaDataProvider outputMetaDataProvider) {
         if (outputMetaData != null) {
             return new OutputMetaData(outputMetaData);
         }
@@ -117,8 +117,8 @@ public final class OutputMetaData {
     @Contract("!null, _, _ -> param1; null, !null, _ -> new")
     @NotNull
     public static OutputMetaData resolveOutputMetaData(
-            final OutputMetaData outputMetaData,
-            final OutputMetaDataProvider outputMetaDataProvider,
+            @Nullable final OutputMetaData outputMetaData,
+            @Nullable final OutputMetaDataProvider outputMetaDataProvider,
             @NotNull final Output output) {
         final var resolvedOutputMetaData =
                 resolveOutputMetaData(outputMetaData, outputMetaDataProvider);

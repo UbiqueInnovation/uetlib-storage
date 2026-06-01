@@ -1,7 +1,7 @@
 package ch.ubique.backend.storage.invocation;
 
-import jakarta.annotation.Nullable;
-
+import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +28,7 @@ public class StorageInvocationHandler implements InvocationHandler {
     }
 
     @Override
-    public Object invoke(final Object proxy, final Method method, @Nullable final Object[] args)
+    public Object invoke(final Object proxy, final Method method, final Object @Nullable [] args)
             throws Throwable {
         return switch (method.getName()) {
             case "equals" -> args != null && equals(args[0]);
@@ -50,7 +50,7 @@ public class StorageInvocationHandler implements InvocationHandler {
                                                         .orElse("null"))
                                 .collect(Collectors.joining(", ")));
                 try {
-                    yield dispatch.get(method)
+                    yield Objects.requireNonNull(dispatch.get(method))
                             .invoke(storageMappingInvocationProperties, method, args);
                 } catch (final InvocationTargetException e) {
                     // ANY (checked or unchecked) exception thrown by the underlying method will be

@@ -6,7 +6,9 @@ import ch.ubique.backend.storage.annotations.StoragePathVariable;
 
 import com.google.common.collect.MoreCollectors;
 
+import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
+import org.jspecify.annotations.Nullable;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -20,7 +22,7 @@ public final class InvocationHandlerUtil {
     private InvocationHandlerUtil() {}
 
     static ObjectMapper getObjectMapper(
-            final ObjectMapper fallbackObjectMapper, final Object[] args) {
+            final ObjectMapper fallbackObjectMapper, final Object @Nullable [] args) {
         return StreamUtils.emptyIfNull(args)
                 // objectMapper can be passed as an argument
                 .filter(ObjectMapper.class::isInstance)
@@ -31,9 +33,12 @@ public final class InvocationHandlerUtil {
     }
 
     public static String getPath(
-            final Parameter[] parameters, final Object[] allArguments, final String pathTemplate) {
+            final Parameter[] parameters,
+            final Object @Nullable [] allArguments,
+            final String pathTemplate) {
         var replacedPath = pathTemplate;
         for (var i = 0; i < parameters.length; i++) {
+            Objects.requireNonNull(allArguments);
             final var parameter = parameters[i];
             final var pathVariableAnnotation =
                     Optional.ofNullable(parameter.getAnnotation(StoragePathVariable.class));
@@ -57,7 +62,7 @@ public final class InvocationHandlerUtil {
         return replacedPath;
     }
 
-    public static String getPathTemplate(final String basePath, final String path) {
+    public static String getPathTemplate(final @Nullable String basePath, final String path) {
         return StringUtils.isBlank(basePath) ? path : basePath + "/" + path;
     }
 
