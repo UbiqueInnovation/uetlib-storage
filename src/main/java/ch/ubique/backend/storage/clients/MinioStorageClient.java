@@ -29,14 +29,13 @@ import io.minio.errors.XmlParserException;
 import io.minio.http.Method;
 import io.minio.messages.DeleteObject;
 
-import jakarta.annotation.Nullable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
 import okhttp3.OkHttpClient;
 
 import org.apache.commons.lang3.NotImplementedException;
-import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -127,8 +126,10 @@ public class MinioStorageClient implements StorageClient {
     public static StorageClientException storageClientException(
             final String message, final Throwable cause) {
 
+        final var causeMessage = cause.getMessage();
         if (cause instanceof ErrorResponseException
-                && cause.getMessage().contains("The specified key does not exist")) {
+                && causeMessage != null
+                && causeMessage.contains("The specified key does not exist")) {
             return new NonRetryableStorageClientException(message, cause);
         }
         if (cause instanceof InsufficientDataException
@@ -187,7 +188,9 @@ public class MinioStorageClient implements StorageClient {
     }
 
     private void writeFile(
-            final FileOutput output, final String path, final OutputMetaData outputMetaData)
+            final FileOutput output,
+            final String path,
+            final @Nullable OutputMetaData outputMetaData)
             throws StorageClientException {
 
         final var metaData = resolveMetaData(output, outputMetaData);
@@ -253,8 +256,8 @@ public class MinioStorageClient implements StorageClient {
                 alignedPartSize, ObjectWriteArgs.MIN_MULTIPART_SIZE, ObjectWriteArgs.MAX_PART_SIZE);
     }
 
-    private @NonNull OutputMetaData resolveMetaData(
-            final Output output, final OutputMetaData outputMetaData) {
+    private OutputMetaData resolveMetaData(
+            final Output output, final @Nullable OutputMetaData outputMetaData) {
         return OutputMetaData.resolveOutputMetaData(outputMetaData, outputMetaDataProvider, output);
     }
 

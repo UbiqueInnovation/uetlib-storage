@@ -2,6 +2,8 @@ package ch.ubique.backend.storage.clients;
 
 import ch.ubique.backend.storage.OutputMetaDataProvider;
 
+import org.jspecify.annotations.Nullable;
+
 import java.time.Duration;
 
 public final class CloudflareR2StorageClient extends RetryStorageClient {
@@ -19,8 +21,8 @@ public final class CloudflareR2StorageClient extends RetryStorageClient {
             final String accountId,
             final String accessKey,
             final String secretKey,
-            final Duration timeout,
-            final OutputMetaDataProvider outputMetaDataProvider) {
+            @Nullable final Duration timeout,
+            @Nullable final OutputMetaDataProvider outputMetaDataProvider) {
         super(
                 new MinioStorageClient(
                         bucket,

@@ -9,6 +9,7 @@ import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.annotations.InputMapping;
 
 import org.apache.commons.lang3.StringUtils;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.io.InputStream;
@@ -27,7 +28,7 @@ public class InputMappingInvocationHandler implements StorageMappingInvocationHa
     public Object invoke(
             final StorageMappingInvocationProperties storageMappingInvocationProperties,
             final Method method,
-            final Object[] args)
+            final Object @Nullable [] args)
             throws Throwable {
         final var storageClient = storageMappingInvocationProperties.storageClient();
         final var inputMapping = findAnnotation(method, InputMapping.class);

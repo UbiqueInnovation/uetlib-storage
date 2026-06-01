@@ -1,5 +1,7 @@
 package ch.ubique.backend.storage.images;
 
+import static java.util.Objects.requireNonNull;
+
 import ch.ubique.backend.image.blurhash.BlurHashClient;
 import ch.ubique.backend.image.blurhash.BlurHashRepresentation;
 import ch.ubique.backend.image.util.ImageUtils;
@@ -123,7 +125,7 @@ public class ImageStorageService {
         final var hires =
                 ImageUtils.scaleAndFlush(
                         ImageUtils.imageFromBytes(originalImageBytes),
-                        ImageVariant.HIRES.getDefaultSize());
+                        requireNonNull(ImageVariant.HIRES.getDefaultSize()));
 
         final byte[] hiresBytes =
                 convertToWebp
@@ -134,7 +136,7 @@ public class ImageStorageService {
                 generatePath.apply(ImageVariant.HIRES));
 
         final var thumbnail =
-                ImageUtils.scaleAndFlush(hires, ImageVariant.THUMBNAIL.getDefaultSize());
+                ImageUtils.scaleAndFlush(hires, requireNonNull(ImageVariant.THUMBNAIL.getDefaultSize()));
         final byte[] thumbnailBytes =
                 convertToWebp
                         ? Webp.lossy(80).encode(thumbnail)

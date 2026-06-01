@@ -22,7 +22,7 @@ import com.azure.storage.blob.sas.BlobSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
 import com.azure.storage.common.policy.RequestRetryOptions;
 
-import jakarta.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 import jakarta.validation.constraints.NotNull;
 
 import java.io.IOException;
@@ -54,7 +54,7 @@ public class AzureBlobStorageClient implements StorageClient {
     public AzureBlobStorageClient(
             final String container,
             final String connectionString,
-            final Duration timeout,
+            @Nullable final Duration timeout,
             @Nullable final OutputMetaDataProvider outputMetaDataProvider) {
         this(container, connectionString, timeout, 1024L, outputMetaDataProvider);
     }
@@ -62,7 +62,7 @@ public class AzureBlobStorageClient implements StorageClient {
     public AzureBlobStorageClient(
             final String container,
             final String connectionString,
-            final Duration timeout,
+            @Nullable final Duration timeout,
             final long blockSize,
             @Nullable final OutputMetaDataProvider outputMetaDataProvider) {
         this.timeout = Objects.requireNonNullElse(timeout, Duration.ofSeconds(60));

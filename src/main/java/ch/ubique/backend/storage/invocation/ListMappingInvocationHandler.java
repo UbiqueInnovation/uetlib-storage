@@ -8,6 +8,7 @@ import ch.ubique.backend.storage.annotations.ListMapping;
 
 import org.slf4j.Logger;
 
+import org.jspecify.annotations.Nullable;
 import java.lang.reflect.Method;
 import java.text.MessageFormat;
 import java.util.Collection;
@@ -28,7 +29,7 @@ public class ListMappingInvocationHandler implements StorageMappingInvocationHan
     public Object invoke(
             final StorageMappingInvocationProperties storageMappingInvocationProperties,
             final Method method,
-            final Object[] args)
+            final Object @Nullable [] args)
             throws Throwable {
         final var storageClient = storageMappingInvocationProperties.storageClient();
         final var listMapping = findAnnotation(method, ListMapping.class);
