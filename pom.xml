@@ -100,6 +100,16 @@
 
     <repositories>
         <repository>
+            <id>ubique-artifactory</id>
+            <name>backend</name>
+            <url>https://artifactory.ubique.ch/artifactory/backend</url>
+        </repository>
+        <repository>
+            <id>ubique-artifactory-virtual</id>
+            <name>ubique</name>
+            <url>https://artifactory.ubique.ch/artifactory/ubique</url>
+        </repository>
+        <repository>
             <id>osgeo</id>
             <name>Open Source Geospatial Foundation Repository</name>
             <url>https://repo.osgeo.org/repository/release/</url>
