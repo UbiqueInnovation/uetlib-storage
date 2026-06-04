@@ -1,9 +1,10 @@
 # CHANGELOG
 
-## 2.0.5
+## 2.1.0
 
 ### Fixes
 
+- Null-marked it all
 - Fix S3 storage client list, now does paging to load all objects, as opposed to just the first page of max 1000 elements
 
 ## 2.0.4
