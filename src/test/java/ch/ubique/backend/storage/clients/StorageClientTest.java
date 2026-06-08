@@ -13,6 +13,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.retry.RetryPolicy;
 import org.springframework.core.retry.RetryTemplate;
 import org.testcontainers.Testcontainers;
@@ -29,6 +31,9 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -70,6 +75,7 @@ class StorageClientTest {
                                     .forPath("/minio/health/ready")
                                     .forPort(9000)
                                     .withStartupTimeout(Duration.ofSeconds(10)));
+    private static final Logger logger = LoggerFactory.getLogger(StorageClientTest.class);
 
     @BeforeAll
     static void createContainers() {
@@ -278,11 +284,13 @@ class StorageClientTest {
         assertThatCollection(storageClient.list("foo/uncompressed"))
                 .containsExactlyInAnyOrderElementsOf(
                         Set.of("foo/uncompressed.gz", "foo/uncompressed.bz"));
-        final var exception =
-                assertThrows(
-                        NonRetryableStorageClientException.class,
-                        () -> storageClient.delete("foo/uncompressed"));
-        assertThat(exception.getMessage()).startsWith("cannot delete non-empty directory.");
+        {
+            final var exception =
+                    assertThrows(
+                            NonRetryableStorageClientException.class,
+                            () -> storageClient.delete("foo/uncompressed"));
+            assertThat(exception.getMessage()).startsWith("cannot delete non-empty directory.");
+        }
 
         // Delete by partial path
         assertThatCollection(storageClient.list(true)).contains("foo/bar-baz.other-extension");
@@ -313,7 +321,52 @@ class StorageClientTest {
         assertFalse(storageClient.exists("foo/bar/"));
         assertFalse(storageClient.exists("foo/bar/baz"));
 
+        if (!isFS(storageClient)) {
+            final var path = "foo/bar-baz-upload";
+            final var uploadSignedUrl =
+                    storageClient.getSignedUploadUrl(path, OffsetDateTime.now().plusHours(1));
+            logger.info("Signed Upload URL: {}", uploadSignedUrl);
+            final var requestBuilder =
+                    HttpRequest.newBuilder(URI.create(uploadSignedUrl))
+                            .PUT(HttpRequest.BodyPublishers.ofString("Uploaded"));
+            if (isAzure(storageClient)) {
+                requestBuilder.header("x-ms-blob-type", "BlockBlob");
+            }
+            final var request = requestBuilder.build();
+            final var client = HttpClient.newHttpClient();
+            try {
+                final var response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() >= 300) {
+                    throw new IOException(
+                            "Got response code "
+                                    + response.statusCode()
+                                    + " while trying to put using upload URL.\n"
+                                    + response);
+                }
+                assertEquals("Uploaded", readStringAndClose(storageClient.read(path)));
+            } catch (final InterruptedException | IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         // Cleanup for the next run
         assertDoesNotThrow(() -> storageClient.delete("", true));
+    }
+
+    private static boolean isFS(final StorageClient storageClient) {
+        return storageClient instanceof FileSystemStorageClient
+                || storageClient instanceof final RetryStorageClient r && isFS(r.delegate())
+                || storageClient instanceof final PrefixStorageClient p && isFS(p.delegate());
+    }
+
+    private static boolean isAzure(final StorageClient storageClient) {
+        return storageClient instanceof AzureBlobStorageClient
+                || storageClient instanceof final RetryStorageClient r && isAzure(r.delegate())
+                || storageClient instanceof final PrefixStorageClient p && isAzure(p.delegate());
+    }
+
+    private static boolean isPrefix(final StorageClient storageClient) {
+        return storageClient instanceof PrefixStorageClient
+                || storageClient instanceof final RetryStorageClient r && isPrefix(r.delegate());
     }
 }

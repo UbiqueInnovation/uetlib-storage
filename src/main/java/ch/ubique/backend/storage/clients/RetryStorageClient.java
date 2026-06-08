@@ -49,6 +49,10 @@ public class RetryStorageClient implements StorageClient {
         this.retryTemplate = requireNonNullElse(retryTemplate, DEFAULT_RETRY_TEMPLATE);
     }
 
+    StorageClient delegate() {
+        return storageClient;
+    }
+
     @Override
     public StorageClient withoutRetry() {
         return storageClient;
@@ -120,6 +124,16 @@ public class RetryStorageClient implements StorageClient {
             throws StorageClientException {
         try {
             return retryTemplate.execute(() -> storageClient.getSignedUrl(path, expiry));
+        } catch (final RetryException e) {
+            throw createStorageClientException(e);
+        }
+    }
+
+    @Override
+    public String getSignedUploadUrl(final String path, final OffsetDateTime expiry)
+            throws StorageClientException {
+        try {
+            return retryTemplate.execute(() -> storageClient.getSignedUploadUrl(path, expiry));
         } catch (final RetryException e) {
             throw createStorageClientException(e);
         }
