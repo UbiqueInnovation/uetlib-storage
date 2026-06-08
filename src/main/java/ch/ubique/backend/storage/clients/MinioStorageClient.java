@@ -12,6 +12,7 @@ import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.exception.NonRetryableStorageClientException;
 import ch.ubique.backend.storage.exception.RetryableStorageClientException;
 import ch.ubique.backend.storage.exception.StorageClientException;
+import ch.ubique.backend.storage.model.PresignedUrlMethod;
 import ch.ubique.backend.storage.output.FileOutput;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
@@ -398,14 +399,30 @@ public class MinioStorageClient implements StorageClient {
     @Override
     public final String getSignedUrl(final String path, final OffsetDateTime expiry)
             throws StorageClientException {
+        return getSignedUrl(path, expiry, PresignedUrlMethod.GET);
+    }
+
+    @Override
+    public final String getSignedUploadUrl(final String path, final OffsetDateTime expiry)
+            throws StorageClientException {
+        return getSignedUrl(path, expiry, PresignedUrlMethod.PUT);
+    }
+
+    private String getSignedUrl(
+            final String path, final OffsetDateTime expiry, final PresignedUrlMethod method)
+            throws StorageClientException {
+        final var minioMethod =
+                switch (method) {
+                    case GET -> Method.GET;
+                    case PUT -> Method.PUT;
+                };
+        final var expirySeconds =
+                (int) Duration.between(OffsetDateTime.now(expiry.getOffset()), expiry).toSeconds();
         try {
             return minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
-                            .method(Method.GET)
-                            .expiry(
-                                    (int)
-                                            Duration.between(OffsetDateTime.now(), expiry)
-                                                    .toSeconds())
+                            .method(minioMethod)
+                            .expiry(expirySeconds)
                             .bucket(bucket)
                             .object(path)
                             .build());

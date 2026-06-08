@@ -31,6 +31,14 @@ public interface StorageClient {
 
     String getSignedUrl(String path, OffsetDateTime expiry) throws StorageClientException;
 
+    /**
+     * Create a Presigned Upload URL. The returned URL can be used to make a PUT-request to, which
+     * includes the file. Note that the Blob Storage Provider may impose further restrictions, note
+     * the Javadoc on the specific implementations and their documentation.
+     */
+    String getSignedUploadUrl(final String path, final OffsetDateTime expiry)
+            throws StorageClientException;
+
     String getUrl(String path) throws StorageClientException;
 
     default void write(final Output output, final String path) throws StorageClientException {
