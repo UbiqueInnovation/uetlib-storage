@@ -245,6 +245,11 @@ public class FileSystemStorageClient implements StorageClient {
     }
 
     @Override
+    public String getSignedUploadUrl(final String path, final OffsetDateTime expiry) {
+        return getUrl(path);
+    }
+
+    @Override
     public String getUrl(final String path) {
         return getCompletePath(path).toUri().toString();
     }

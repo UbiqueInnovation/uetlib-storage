@@ -9,6 +9,7 @@ import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.exception.RetryableStorageClientException;
 import ch.ubique.backend.storage.exception.S3StorageClientException;
 import ch.ubique.backend.storage.exception.StorageClientException;
+import ch.ubique.backend.storage.model.PresignedUrlMethod;
 import ch.ubique.backend.storage.output.ByteOutput;
 import ch.ubique.backend.storage.output.FileOutput;
 import ch.ubique.backend.storage.output.GZipOutput;
@@ -35,6 +36,7 @@ import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.DownloadRequest;
 
@@ -412,8 +414,19 @@ public class AmazonS3StorageClient implements StorageClient {
     @Override
     public String getSignedUrl(final String path, final OffsetDateTime expiry)
             throws StorageClientException {
+        return getSignedUrl(path, expiry, PresignedUrlMethod.GET);
+    }
+
+    @Override
+    public String getSignedUploadUrl(final String path, final OffsetDateTime expiry)
+            throws StorageClientException {
+        return getSignedUrl(path, expiry, PresignedUrlMethod.PUT);
+    }
+
+    private String getSignedUrl(
+            final String path, final OffsetDateTime expiry, final PresignedUrlMethod method)
+            throws StorageClientException {
         try {
-            final PresignedGetObjectRequest presignedRequest;
             final var presignedBuilder =
                     S3Presigner.builder()
                             .region(s3AsyncClient.serviceClientConfiguration().region())
@@ -431,21 +444,47 @@ public class AmazonS3StorageClient implements StorageClient {
                 presignedBuilder.serviceConfiguration(
                         S3Configuration.builder().pathStyleAccessEnabled(true).build());
             }
-            try (final var presigner = presignedBuilder.build()) {
-                presignedRequest =
-                        presigner.presignGetObject(
-                                builder ->
-                                        builder.getObjectRequest(
-                                                        getObjectRequestBuilder ->
-                                                                getObjectRequestBuilder
-                                                                        .bucket(bucket)
-                                                                        .key(path))
-                                                .signatureDuration(
-                                                        Duration.between(
-                                                                OffsetDateTime.now(), expiry)));
-            }
+            return switch (method) {
+                case GET -> {
+                    final PresignedGetObjectRequest presignedRequest;
+                    try (final var presigner = presignedBuilder.build()) {
+                        presignedRequest =
+                                presigner.presignGetObject(
+                                        builder ->
+                                                builder.getObjectRequest(
+                                                                objectRequestBuilder ->
+                                                                        objectRequestBuilder
+                                                                                .bucket(bucket)
+                                                                                .key(path))
+                                                        .signatureDuration(
+                                                                Duration.between(
+                                                                        OffsetDateTime.now(
+                                                                                expiry.getOffset()),
+                                                                        expiry)));
+                    }
 
-            return presignedRequest.url().toString();
+                    yield presignedRequest.url().toString();
+                }
+                case PUT -> {
+                    final PresignedPutObjectRequest presignedRequest;
+                    try (final var presigner = presignedBuilder.build()) {
+                        presignedRequest =
+                                presigner.presignPutObject(
+                                        builder ->
+                                                builder.putObjectRequest(
+                                                                objectRequestBuilder ->
+                                                                        objectRequestBuilder
+                                                                                .bucket(bucket)
+                                                                                .key(path))
+                                                        .signatureDuration(
+                                                                Duration.between(
+                                                                        OffsetDateTime.now(
+                                                                                expiry.getOffset()),
+                                                                        expiry)));
+                    }
+                    yield presignedRequest.url().toString();
+                }
+            };
         } catch (final CancellationException | CompletionException e) {
             throw toStorageClientException(
                     MessageFormat.format(

@@ -36,6 +36,7 @@ import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class AzureBlobStorageClient implements StorageClient {
@@ -226,16 +227,41 @@ public class AzureBlobStorageClient implements StorageClient {
 
     @Override
     public String getSignedUrl(final String path, final OffsetDateTime expiry) {
-        final var blobSasPermission = new BlobSasPermission().setReadPermission(true);
+        return getSignedUrl(path, expiry, p -> p.setReadPermission(true));
+    }
+
+    /**
+     * Note: On the `PUT` request, Azure requires the following Header to be present.
+     *
+     * <p>{@code x-ms-blob-type: "BlockBlob"}
+     */
+    @Override
+    public String getSignedUploadUrl(final String path, final OffsetDateTime expiry) {
+        return getSignedUrl(
+                path,
+                expiry,
+                p -> p.setCreatePermission(true).setWritePermission(true).setReadPermission(true));
+    }
+
+    private String getSignedUrl(
+            final String path,
+            final OffsetDateTime expiry,
+            final Function<BlobSasPermission, BlobSasPermission> configurer) {
+        final var blobSasPermission = configureSasPermission(configurer);
         final var values =
                 new BlobServiceSasSignatureValues(expiry, blobSasPermission)
-                        .setStartTime(OffsetDateTime.now());
+                        .setStartTime(OffsetDateTime.now(expiry.getOffset()));
 
         final var blobClient = blobContainerClient.getBlobClient(path);
 
         return URLDecoder.decode(blobClient.getBlobUrl(), StandardCharsets.UTF_8)
                 + "?"
                 + blobClient.generateSas(values);
+    }
+
+    private BlobSasPermission configureSasPermission(
+            final Function<BlobSasPermission, BlobSasPermission> function) {
+        return function.apply(new BlobSasPermission());
     }
 
     @Override

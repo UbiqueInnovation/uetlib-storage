@@ -41,6 +41,10 @@ public class PrefixStorageClient implements StorageClient {
         return clean + "/";
     }
 
+    StorageClient delegate() {
+        return storageClient;
+    }
+
     @Override
     public StorageClient withoutRetry() {
         return new PrefixStorageClient(pathPrefix, storageClient.withoutRetry());
@@ -89,6 +93,12 @@ public class PrefixStorageClient implements StorageClient {
     public String getSignedUrl(final String path, final OffsetDateTime expiry)
             throws StorageClientException {
         return storageClient.getSignedUrl(prefixedPath(path), expiry);
+    }
+
+    @Override
+    public String getSignedUploadUrl(final String path, final OffsetDateTime expiry)
+            throws StorageClientException {
+        return storageClient.getSignedUploadUrl(prefixedPath(path), expiry);
     }
 
     @Override
