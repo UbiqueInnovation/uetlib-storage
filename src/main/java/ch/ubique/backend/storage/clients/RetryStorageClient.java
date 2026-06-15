@@ -164,6 +164,7 @@ public class RetryStorageClient implements StorageClient {
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+                .append("retryTemplate", retryTemplate)
                 .append("storageClient", storageClient)
                 .toString();
     }

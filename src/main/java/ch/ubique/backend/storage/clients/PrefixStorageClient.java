@@ -131,8 +131,8 @@ public class PrefixStorageClient implements StorageClient {
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-                .append("prefix", pathPrefix)
-                .append("client", storageClient)
+                .append("pathPrefix", pathPrefix)
+                .append("storageClient", storageClient)
                 .toString();
     }
 }
