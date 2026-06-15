@@ -3,7 +3,6 @@ package ch.ubique.backend.storage.annotations;
 import ch.ubique.backend.storage.OutputMetaData;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 import org.slf4j.event.Level;
 
@@ -13,8 +12,7 @@ import java.util.Map;
 public interface TestOutputStorage {
 
     @OutputMapping(path = "files/{fileId}.png", contentType = "image/png", logLevel = Level.WARN)
-    void saveImage(
-            @StorageObject @NotNull byte[] data, @StoragePathVariable @NotBlank String fileId)
+    void saveImage(@StorageObject byte[] data, @StoragePathVariable @NotBlank String fileId)
             throws IOException;
 
     @OutputMapping(

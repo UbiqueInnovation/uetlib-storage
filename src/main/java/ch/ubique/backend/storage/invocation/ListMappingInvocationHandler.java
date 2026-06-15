@@ -6,9 +6,9 @@ import static ch.ubique.backend.storage.logger.LogAtNullableLevel.atLevel;
 import ch.ubique.backend.core.utils.ArrayUtils;
 import ch.ubique.backend.storage.annotations.ListMapping;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-import org.jspecify.annotations.Nullable;
 import java.lang.reflect.Method;
 import java.text.MessageFormat;
 import java.util.Collection;

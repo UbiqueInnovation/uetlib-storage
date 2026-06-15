@@ -9,8 +9,6 @@ import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.exception.NonRetryableStorageClientException;
 import ch.ubique.backend.storage.output.ByteOutput;
 
-import jakarta.validation.constraints.NotNull;
-
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -124,8 +122,8 @@ class StorageClientTest {
         final var connectionString =
                 String.format(
                         "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;"
-                                + "AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;"
-                                + "BlobEndpoint=http://%s:%s/devstoreaccount1;",
+                            + "AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;"
+                            + "BlobEndpoint=http://%s:%s/devstoreaccount1;",
                         AZURE_BLOB_STORAGE_CONTAINER.getHost(), mappedPort);
 
         final var storageClient = new AzureBlobStorageClient("test", connectionString);
@@ -163,7 +161,6 @@ class StorageClientTest {
         return Stream.of(minioStorageClient, awsStorageClient);
     }
 
-    @NotNull
     private static String readStringAndClose(final InputStream storageClient) throws IOException {
         return new String(
                 InputStreamUtils.readBytesAndClose(storageClient), StandardCharsets.UTF_8);

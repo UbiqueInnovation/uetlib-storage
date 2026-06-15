@@ -6,7 +6,6 @@ import ch.ubique.backend.storage.annotations.StoragePathVariable;
 
 import com.google.common.collect.MoreCollectors;
 
-import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
 
@@ -15,6 +14,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.Objects;
 import java.util.Optional;
 
 public final class InvocationHandlerUtil {

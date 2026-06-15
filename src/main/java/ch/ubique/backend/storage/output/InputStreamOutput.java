@@ -2,12 +2,11 @@ package ch.ubique.backend.storage.output;
 
 import ch.ubique.backend.core.utils.StringUtils;
 
-import org.jspecify.annotations.Nullable;
-
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;

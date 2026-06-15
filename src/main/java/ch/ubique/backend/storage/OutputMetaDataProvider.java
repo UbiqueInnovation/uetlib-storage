@@ -6,15 +6,14 @@ import static java.util.Objects.requireNonNullElse;
 import io.minio.messages.CannedAcl;
 
 import org.jspecify.annotations.Nullable;
-import jakarta.validation.constraints.NotNull;
 
 import java.time.Duration;
 import java.time.Instant;
 
 public final class OutputMetaDataProvider {
 
-    private final @NotNull Duration maxAge;
-    private final @NotNull Duration sMaxAge;
+    private final Duration maxAge;
+    private final Duration sMaxAge;
 
     private @Nullable Duration expiresOffset;
     private @Nullable Duration bestBeforeOffset;
@@ -28,8 +27,7 @@ public final class OutputMetaDataProvider {
      * @param maxAge Duration must not be null
      * @param sMaxAge Duration will be set to maxAge if null
      */
-    public OutputMetaDataProvider(
-            final @NotNull Duration maxAge, @Nullable final Duration sMaxAge) {
+    public OutputMetaDataProvider(final Duration maxAge, @Nullable final Duration sMaxAge) {
         this.maxAge = requireNonNull(maxAge, "maxAge must not be null");
         this.sMaxAge = requireNonNullElse(sMaxAge, maxAge);
     }
@@ -41,7 +39,7 @@ public final class OutputMetaDataProvider {
      * @param expiresOffset the offset for the {@code Expires} header
      * @return this to allow chaining
      */
-    public OutputMetaDataProvider expiresOffset(final @NotNull Duration expiresOffset) {
+    public OutputMetaDataProvider expiresOffset(final Duration expiresOffset) {
         this.expiresOffset = requireNonNull(expiresOffset);
         return this;
     }
@@ -53,7 +51,7 @@ public final class OutputMetaDataProvider {
      * @param bestBeforeOffset the offset for the {@code Best-Before} header
      * @return this to allow chaining
      */
-    public OutputMetaDataProvider bestBeforeOffset(final @NotNull Duration bestBeforeOffset) {
+    public OutputMetaDataProvider bestBeforeOffset(final Duration bestBeforeOffset) {
         requireNonNull(bestBeforeOffset);
         this.bestBeforeOffset = bestBeforeOffset;
         return this;
@@ -66,13 +64,13 @@ public final class OutputMetaDataProvider {
      * @param nextRefreshOffset the offset for the {@code Next-Refresh} header
      * @return this to allow chaining
      */
-    public OutputMetaDataProvider nextRefreshOffset(final @NotNull Duration nextRefreshOffset) {
+    public OutputMetaDataProvider nextRefreshOffset(final Duration nextRefreshOffset) {
         requireNonNull(nextRefreshOffset);
         this.nextRefreshOffset = nextRefreshOffset;
         return this;
     }
 
-    public OutputMetaDataProvider backoff(final @NotNull Duration backoff) {
+    public OutputMetaDataProvider backoff(final Duration backoff) {
         requireNonNull(backoff);
         this.backoff = backoff;
         return this;
@@ -86,7 +84,7 @@ public final class OutputMetaDataProvider {
      * @param accessPolicy The access policy
      * @return this to allow chaining
      */
-    public OutputMetaDataProvider accessPolicy(final @NotNull CannedAcl accessPolicy)
+    public OutputMetaDataProvider accessPolicy(final CannedAcl accessPolicy)
             throws IllegalStateException {
         if (customAccessPolicy != null) {
             throw new IllegalStateException(
@@ -106,7 +104,7 @@ public final class OutputMetaDataProvider {
      * @param customAccessPolicy The custom access policy
      * @return this to allow chaining
      */
-    public OutputMetaDataProvider customAccessPolicy(final @NotNull String customAccessPolicy)
+    public OutputMetaDataProvider customAccessPolicy(final String customAccessPolicy)
             throws IllegalStateException {
         if (accessPolicy != null) {
             throw new IllegalStateException(

@@ -4,16 +4,15 @@ import ch.ubique.backend.storage.StorageMappingType;
 import ch.ubique.backend.storage.annotations.*;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
 public record StorageMethodInfo(
-        @NotNull Method storageMethod,
+        Method storageMethod,
         @NotBlank String mappingPath,
-        @NotNull StorageMappingType storageMappingType,
-        @NotNull Annotation storageMappingAnnotation) {
+        StorageMappingType storageMappingType,
+        Annotation storageMappingAnnotation) {
 
     private <T extends Annotation> T castStorageMappingAnnotation() {
         //noinspection unchecked

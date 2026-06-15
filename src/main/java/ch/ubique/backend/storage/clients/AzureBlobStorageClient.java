@@ -23,7 +23,6 @@ import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
 import com.azure.storage.common.policy.RequestRetryOptions;
 
 import org.jspecify.annotations.Nullable;
-import jakarta.validation.constraints.NotNull;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -83,9 +82,8 @@ public class AzureBlobStorageClient implements StorageClient {
         this.blockSize = blockSize;
     }
 
-    @NotNull
     private static BlobHttpHeaders createHeaders(
-            @NotNull final Output output, @Nullable final OutputMetaData metaData) {
+            final Output output, @Nullable final OutputMetaData metaData) {
         final var headers = new BlobHttpHeaders();
 
         // contentType
@@ -104,9 +102,7 @@ public class AzureBlobStorageClient implements StorageClient {
 
     @Override
     public void write(
-            final @NotNull Output output,
-            final @NotNull String path,
-            @Nullable final OutputMetaData outputMetaData)
+            final Output output, final String path, @Nullable final OutputMetaData outputMetaData)
             throws StorageClientException {
         final var metaData =
                 OutputMetaData.resolveOutputMetaData(
@@ -134,8 +130,7 @@ public class AzureBlobStorageClient implements StorageClient {
 
     @Override
     public void write(
-            final @NotNull Collection<OutputWithPath> outputs,
-            @Nullable final OutputMetaData outputMetaData)
+            final Collection<OutputWithPath> outputs, @Nullable final OutputMetaData outputMetaData)
             throws StorageClientException {
         // The SDK unfortunately does not support a bulk upload.
         VirtualThreadUtils.throwingForEach(
@@ -144,7 +139,7 @@ public class AzureBlobStorageClient implements StorageClient {
 
     @Override
     @SuppressWarnings("java:S2095")
-    public InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
+    public InputStream read(final String path, final boolean doUncompressIfNeeded)
             throws StorageClientException {
         try {
             final var inputStream = blobContainerClient.getBlobClient(path).openInputStream();
@@ -169,7 +164,7 @@ public class AzureBlobStorageClient implements StorageClient {
     }
 
     @Override
-    public boolean delete(final @NotNull String path, final boolean recursive)
+    public boolean delete(final String path, final boolean recursive)
             throws StorageClientException {
         if (recursive) {
             return deleteRecursive(path);
@@ -207,7 +202,7 @@ public class AzureBlobStorageClient implements StorageClient {
     }
 
     @Override
-    public Collection<String> list(@NotNull final String path, final boolean recursive)
+    public Collection<String> list(final String path, final boolean recursive)
             throws StorageClientException {
 
         final PagedIterable<BlobItem> blobItems;
@@ -221,7 +216,7 @@ public class AzureBlobStorageClient implements StorageClient {
     }
 
     @Override
-    public boolean exists(final @NotNull String path) throws StorageClientException {
+    public boolean exists(final String path) throws StorageClientException {
         return blobExists(path) || !list(path, false).isEmpty();
     }
 
@@ -230,7 +225,7 @@ public class AzureBlobStorageClient implements StorageClient {
     }
 
     @Override
-    public String getSignedUrl(final @NotNull String path, final @NotNull OffsetDateTime expiry) {
+    public String getSignedUrl(final String path, final OffsetDateTime expiry) {
         final var blobSasPermission = new BlobSasPermission().setReadPermission(true);
         final var values =
                 new BlobServiceSasSignatureValues(expiry, blobSasPermission)
@@ -244,7 +239,7 @@ public class AzureBlobStorageClient implements StorageClient {
     }
 
     @Override
-    public String getUrl(final @NotNull String path) {
+    public String getUrl(final String path) {
         final var blobUrlEncoded = URLEncoder.encode(path, StandardCharsets.UTF_8);
         final var blobClient = blobContainerClient.getBlobClient(blobUrlEncoded);
         return URLDecoder.decode(blobClient.getBlobUrl(), StandardCharsets.UTF_8);

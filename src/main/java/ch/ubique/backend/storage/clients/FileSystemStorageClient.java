@@ -7,10 +7,6 @@ import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
 
-import java.util.Objects;
-import org.jspecify.annotations.Nullable;
-import jakarta.validation.constraints.NotNull;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.apache.commons.io.filefilter.PrefixFileFilter;
@@ -18,6 +14,7 @@ import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +30,7 @@ import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.time.OffsetDateTime;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -82,9 +79,7 @@ public class FileSystemStorageClient implements StorageClient {
 
     @Override
     public void write(
-            final @NotNull Output output,
-            final @NotNull String path,
-            @Nullable final OutputMetaData outputMetaData)
+            final Output output, final String path, @Nullable final OutputMetaData outputMetaData)
             throws StorageClientException {
         final var completePath = getCompletePath(path);
         final var file = new File(completePath.toUri());
@@ -126,7 +121,7 @@ public class FileSystemStorageClient implements StorageClient {
 
     @Override
     @SuppressWarnings("java:S2095")
-    public InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
+    public InputStream read(final String path, final boolean doUncompressIfNeeded)
             throws StorageClientException {
         final var completePath = getCompletePath(path);
         final var file = new File(completePath.toUri());
@@ -147,7 +142,7 @@ public class FileSystemStorageClient implements StorageClient {
     }
 
     @Override
-    public boolean delete(final @NotNull String path, final boolean recursive)
+    public boolean delete(final String path, final boolean recursive)
             throws StorageClientException {
         if (recursive) {
             return deleteRecursive(path);
@@ -215,7 +210,7 @@ public class FileSystemStorageClient implements StorageClient {
     }
 
     @Override
-    public Collection<String> list(@NotNull final String path, final boolean recursive)
+    public Collection<String> list(final String path, final boolean recursive)
             throws StorageClientException {
         final var completePath = getCompletePath(path);
         logger.trace("listing files from {} (complete path {})", path, completePath);
@@ -234,7 +229,7 @@ public class FileSystemStorageClient implements StorageClient {
     }
 
     @Override
-    public boolean exists(final @NotNull String path) throws StorageClientException {
+    public boolean exists(final String path) throws StorageClientException {
         return !list(path, true).isEmpty();
     }
 
@@ -245,17 +240,16 @@ public class FileSystemStorageClient implements StorageClient {
     }
 
     @Override
-    public String getSignedUrl(final @NotNull String path, final @NotNull OffsetDateTime expiry) {
+    public String getSignedUrl(final String path, final OffsetDateTime expiry) {
         return getUrl(path);
     }
 
     @Override
-    public String getUrl(final @NotNull String path) {
+    public String getUrl(final String path) {
         return getCompletePath(path).toUri().toString();
     }
 
-    @NotNull
-    private Path getCompletePath(@NotNull final String path) {
+    private Path getCompletePath(final String path) {
         return Path.of(basePath, path);
     }
 
