@@ -12,7 +12,6 @@ import ch.ubique.backend.storage.output.OutputWithPath;
 import com.pivovarit.function.ThrowingRunnable;
 
 import jakarta.annotation.Nullable;
-import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
@@ -44,8 +43,7 @@ public class RetryStorageClient implements StorageClient {
     }
 
     public RetryStorageClient(
-            @NotNull final StorageClient storageClient,
-            @Nullable final RetryTemplate retryTemplate) {
+            final StorageClient storageClient, @Nullable final RetryTemplate retryTemplate) {
         this.storageClient =
                 requireNonNull(storageClient, "Storage client must not be null.").withoutRetry();
         this.retryTemplate = requireNonNullElse(retryTemplate, DEFAULT_RETRY_TEMPLATE);
@@ -58,9 +56,7 @@ public class RetryStorageClient implements StorageClient {
 
     @Override
     public void write(
-            final @NotNull Output output,
-            final @NotNull String path,
-            @Nullable final OutputMetaData outputMetaData)
+            final Output output, final String path, @Nullable final OutputMetaData outputMetaData)
             throws StorageClientException {
         if (output.canBeRetried()) {
             retryRunnable(() -> storageClient.write(output, path, outputMetaData));
@@ -81,7 +77,7 @@ public class RetryStorageClient implements StorageClient {
     }
 
     @Override
-    public InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
+    public InputStream read(final String path, final boolean doUncompressIfNeeded)
             throws StorageClientException {
         try {
             return retryTemplate.execute(() -> storageClient.read(path, doUncompressIfNeeded));
@@ -91,7 +87,7 @@ public class RetryStorageClient implements StorageClient {
     }
 
     @Override
-    public boolean delete(final @NotNull String path, final boolean recursive)
+    public boolean delete(final String path, final boolean recursive)
             throws StorageClientException {
         try {
             return retryTemplate.execute(() -> storageClient.delete(path, recursive));
@@ -101,7 +97,7 @@ public class RetryStorageClient implements StorageClient {
     }
 
     @Override
-    public Collection<String> list(final @NotNull String path, final boolean recursive)
+    public Collection<String> list(final String path, final boolean recursive)
             throws StorageClientException {
         try {
             return retryTemplate.execute(() -> storageClient.list(path, recursive));
@@ -111,7 +107,7 @@ public class RetryStorageClient implements StorageClient {
     }
 
     @Override
-    public boolean exists(@NotNull final String path) throws StorageClientException {
+    public boolean exists(final String path) throws StorageClientException {
         try {
             return retryTemplate.execute(() -> storageClient.exists(path));
         } catch (final RetryException e) {
@@ -120,7 +116,7 @@ public class RetryStorageClient implements StorageClient {
     }
 
     @Override
-    public String getSignedUrl(final @NotNull String path, final @NotNull OffsetDateTime expiry)
+    public String getSignedUrl(final String path, final OffsetDateTime expiry)
             throws StorageClientException {
         try {
             return retryTemplate.execute(() -> storageClient.getSignedUrl(path, expiry));
@@ -130,7 +126,7 @@ public class RetryStorageClient implements StorageClient {
     }
 
     @Override
-    public String getUrl(final @NotNull String path) throws StorageClientException {
+    public String getUrl(final String path) throws StorageClientException {
         try {
             return retryTemplate.execute(() -> storageClient.getUrl(path));
         } catch (final RetryException e) {

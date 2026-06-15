@@ -14,8 +14,6 @@ import ch.ubique.backend.storage.output.InputStreamOutput;
 import com.drew.imaging.ImageProcessingException;
 import com.google.common.net.MediaType;
 
-import jakarta.validation.constraints.NotNull;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
@@ -50,7 +48,6 @@ public class ImageStorageService {
         this.blurHashClient = blurHashClient;
     }
 
-    @NotNull
     public BlurHashRepresentation processImage(
             final InputStream imageInputStream,
             final Function<ImageVariant, String> generatePath,
@@ -80,7 +77,6 @@ public class ImageStorageService {
                 generatePath.apply(ImageVariant.ORIGINAL));
     }
 
-    @NotNull
     public BlurHashRepresentation processImageFromOriginal(
             final Function<ImageVariant, String> generatePath, final MediaType mediaType)
             throws IOException, ImageProcessingException {
@@ -89,7 +85,6 @@ public class ImageStorageService {
         return processImageFromOriginalBytes(generatePath, originalImageBytes, mediaType);
     }
 
-    @NotNull
     public BlurHashRepresentation processImageFromOriginalConvertToWebp(
             final Function<ImageVariant, String> generatePath, final MediaType mediaType)
             throws IOException, ImageProcessingException {
@@ -98,7 +93,6 @@ public class ImageStorageService {
         return processImageFromOriginalBytesConvertToWebp(generatePath, originalImageBytes);
     }
 
-    @NotNull
     public BlurHashRepresentation processImageFromOriginalBytes(
             final Function<ImageVariant, String> generatePath,
             final byte[] originalImageBytes,
@@ -107,7 +101,6 @@ public class ImageStorageService {
         return processImageFromOriginalBytes(generatePath, originalImageBytes, mediaType, false);
     }
 
-    @NotNull
     public BlurHashRepresentation processImageFromOriginalBytesConvertToWebp(
             final Function<ImageVariant, String> generatePath, final byte[] originalImageBytes)
             throws IOException, ImageProcessingException {
@@ -115,7 +108,6 @@ public class ImageStorageService {
                 generatePath, originalImageBytes, MediaType.WEBP, true);
     }
 
-    @NotNull
     private BlurHashRepresentation processImageFromOriginalBytes(
             final Function<ImageVariant, String> generatePath,
             final byte[] originalImageBytes,
@@ -136,7 +128,8 @@ public class ImageStorageService {
                 generatePath.apply(ImageVariant.HIRES));
 
         final var thumbnail =
-                ImageUtils.scaleAndFlush(hires, requireNonNull(ImageVariant.THUMBNAIL.getDefaultSize()));
+                ImageUtils.scaleAndFlush(
+                        hires, requireNonNull(ImageVariant.THUMBNAIL.getDefaultSize()));
         final byte[] thumbnailBytes =
                 convertToWebp
                         ? Webp.lossy(80).encode(thumbnail)

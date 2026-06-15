@@ -30,7 +30,6 @@ import io.minio.http.Method;
 import io.minio.messages.DeleteObject;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 
 import okhttp3.OkHttpClient;
 
@@ -96,9 +95,8 @@ public class MinioStorageClient implements StorageClient {
                 outputMetaDataProvider);
     }
 
-    @NotNull
     private static Map<String, String> createHeaders(
-            @NotNull final Output output, @Nullable final OutputMetaData metaData) {
+            final Output output, @Nullable final OutputMetaData metaData) {
         final var headers = new HashMap<String, String>();
 
         // contentEncoding
@@ -144,9 +142,7 @@ public class MinioStorageClient implements StorageClient {
 
     @Override
     public final void write(
-            final @NotNull Output output,
-            final @NotNull String path,
-            @Nullable final OutputMetaData outputMetaData)
+            final Output output, final String path, @Nullable final OutputMetaData outputMetaData)
             throws StorageClientException {
 
         if (output instanceof final FileOutput file) {
@@ -271,7 +267,7 @@ public class MinioStorageClient implements StorageClient {
 
     @Override
     public final void write(
-            final Collection<@NotNull @Valid OutputWithPath> outputsWithPaths,
+            final Collection<@Valid OutputWithPath> outputsWithPaths,
             @Nullable final OutputMetaData outputMetaData)
             throws StorageClientException {
 
@@ -284,7 +280,7 @@ public class MinioStorageClient implements StorageClient {
     }
 
     @Override
-    public final InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
+    public final InputStream read(final String path, final boolean doUncompressIfNeeded)
             throws StorageClientException {
         try {
             final var objectResponse =
@@ -315,7 +311,7 @@ public class MinioStorageClient implements StorageClient {
     }
 
     @Override
-    public final boolean delete(final @NotNull String path, final boolean recursive)
+    public final boolean delete(final String path, final boolean recursive)
             throws StorageClientException {
 
         final var existing = list(path, true);
@@ -362,7 +358,7 @@ public class MinioStorageClient implements StorageClient {
     }
 
     @Override
-    public Collection<String> list(@NotNull final String path, final boolean recursive)
+    public Collection<String> list(final String path, final boolean recursive)
             throws StorageClientException {
         final var objects =
                 minioClient.listObjects(
@@ -395,13 +391,12 @@ public class MinioStorageClient implements StorageClient {
     }
 
     @Override
-    public boolean exists(final @NotNull String path) throws StorageClientException {
+    public boolean exists(final String path) throws StorageClientException {
         return !list(path, false).isEmpty();
     }
 
     @Override
-    public final String getSignedUrl(
-            final @NotNull String path, final @NotNull OffsetDateTime expiry)
+    public final String getSignedUrl(final String path, final OffsetDateTime expiry)
             throws StorageClientException {
         try {
             return minioClient.getPresignedObjectUrl(
@@ -432,7 +427,7 @@ public class MinioStorageClient implements StorageClient {
     }
 
     @Override
-    public final String getUrl(final @NotNull String path) {
+    public final String getUrl(final String path) {
         throw new NotImplementedException(
                 "Minio (actually S3) does not support permanent share URLs? (Maximum is 7 days as"
                         + " per S3 spec)");

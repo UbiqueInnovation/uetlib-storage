@@ -2,8 +2,6 @@ package ch.ubique.backend.storage.utils;
 
 import ch.ubique.backend.core.utils.InputStreamUtils;
 
-import jakarta.validation.constraints.NotNull;
-
 import org.jspecify.annotations.Nullable;
 
 import java.io.BufferedInputStream;
@@ -16,8 +14,8 @@ import java.util.zip.ZipException;
 public final class CompressionUtils {
     private CompressionUtils() {}
 
-    public static @NotNull InputStream tryToUncompress(
-            @NotNull final InputStream inputStream,
+    public static InputStream tryToUncompress(
+            final InputStream inputStream,
             @Nullable final String contentEncoding,
             @Nullable final String path)
             throws IOException {
@@ -30,8 +28,7 @@ public final class CompressionUtils {
         }
     }
 
-    public static @NotNull InputStream markSupportedInputStream(
-            @NotNull final InputStream inputStream) {
+    public static InputStream markSupportedInputStream(final InputStream inputStream) {
         if (inputStream.markSupported()) {
             return inputStream;
         }
