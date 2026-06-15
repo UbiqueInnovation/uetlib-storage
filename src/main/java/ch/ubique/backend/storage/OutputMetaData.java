@@ -17,10 +17,8 @@ import com.google.common.net.HttpHeaders;
 
 import io.minio.messages.CannedAcl;
 
-import org.jspecify.annotations.Nullable;
 import jakarta.validation.ValidationException;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
@@ -28,6 +26,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.jetbrains.annotations.Contract;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +55,7 @@ public final class OutputMetaData {
      * @param cacheControl must not be blank. You can create a valid value using e.g.
      *     org.springframework.http.CacheControl.getHeaderValue
      */
-    public OutputMetaData(@NotNull final String cacheControl) {
+    public OutputMetaData(final String cacheControl) {
         this.cacheControl = cacheControl;
         if (StringUtils.isBlank(cacheControl)) {
             throw new ValidationException("An empty cache control is disallowed.");
@@ -67,7 +66,7 @@ public final class OutputMetaData {
      * @param maxAge Duration must not be null
      * @param sMaxAge Duration will be set to maxAge if null
      */
-    public OutputMetaData(@NotNull final Duration maxAge, @Nullable final Duration sMaxAge) {
+    public OutputMetaData(final Duration maxAge, @Nullable final Duration sMaxAge) {
         this(
                 MAX_AGE
                         + "="
@@ -101,7 +100,6 @@ public final class OutputMetaData {
     }
 
     @Contract("!null, _ -> param1; null, !null -> new")
-    @NotNull
     public static OutputMetaData resolveOutputMetaData(
             @Nullable final OutputMetaData outputMetaData,
             @Nullable final OutputMetaDataProvider outputMetaDataProvider) {
@@ -115,11 +113,10 @@ public final class OutputMetaData {
     }
 
     @Contract("!null, _, _ -> param1; null, !null, _ -> new")
-    @NotNull
     public static OutputMetaData resolveOutputMetaData(
             @Nullable final OutputMetaData outputMetaData,
             @Nullable final OutputMetaDataProvider outputMetaDataProvider,
-            @NotNull final Output output) {
+            final Output output) {
         final var resolvedOutputMetaData =
                 resolveOutputMetaData(outputMetaData, outputMetaDataProvider);
         setUncompressedContentLength(output, resolvedOutputMetaData);
@@ -140,24 +137,24 @@ public final class OutputMetaData {
         resolvedOutputMetaData.contentLengthUncompressed(output.uncompressedContentLength());
     }
 
-    public OutputMetaData expires(@NotNull final Instant expires) {
+    public OutputMetaData expires(final Instant expires) {
         this.expires = requireNonNull(expires);
         return this;
     }
 
-    public OutputMetaData bestBefore(@NotNull final Instant bestBefore) {
+    public OutputMetaData bestBefore(final Instant bestBefore) {
         requireNonNull(bestBefore);
         this.bestBefore = bestBefore;
         return this;
     }
 
-    public OutputMetaData nextRefresh(@NotNull final Instant nextRefresh) {
+    public OutputMetaData nextRefresh(final Instant nextRefresh) {
         requireNonNull(nextRefresh);
         this.nextRefresh = nextRefresh;
         return this;
     }
 
-    public OutputMetaData backoff(@NotNull final Duration backoff) {
+    public OutputMetaData backoff(final Duration backoff) {
         requireNonNull(backoff);
         this.backoff = backoff;
         return this;
@@ -171,8 +168,7 @@ public final class OutputMetaData {
      * @param accessPolicy The access policy
      * @return this to allow chaining
      */
-    public OutputMetaData accessPolicy(@NotNull final CannedAcl accessPolicy)
-            throws IllegalStateException {
+    public OutputMetaData accessPolicy(final CannedAcl accessPolicy) throws IllegalStateException {
         if (customAccessPolicy != null) {
             throw new IllegalStateException(
                     "Cannot set access policy and custom access policy at the same time");
@@ -191,7 +187,7 @@ public final class OutputMetaData {
      * @param customAccessPolicy The custom access policy
      * @return this to allow chaining
      */
-    public OutputMetaData customAccessPolicy(@NotNull final String customAccessPolicy)
+    public OutputMetaData customAccessPolicy(final String customAccessPolicy)
             throws IllegalStateException {
         if (accessPolicy != null) {
             throw new IllegalStateException(
@@ -202,7 +198,7 @@ public final class OutputMetaData {
         return this;
     }
 
-    public OutputMetaData contentLengthUncompressed(@NotNull final Long contentLengthUncompressed) {
+    public OutputMetaData contentLengthUncompressed(final Long contentLengthUncompressed) {
         requireNonNull(contentLengthUncompressed);
         this.contentLengthUncompressed = contentLengthUncompressed;
         return this;

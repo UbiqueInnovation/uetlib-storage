@@ -17,7 +17,6 @@ import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.jspecify.annotations.Nullable;
@@ -194,9 +193,7 @@ public class AmazonS3StorageClient implements StorageClient {
 
     @Override
     public final void write(
-            final @NotNull Output output,
-            final @NotNull String path,
-            @Nullable final OutputMetaData outputMetaData)
+            final Output output, final String path, @Nullable final OutputMetaData outputMetaData)
             throws StorageClientException {
         try {
             final var metaData =
@@ -281,7 +278,7 @@ public class AmazonS3StorageClient implements StorageClient {
 
     @Override
     public final void write(
-            final Collection<@NotNull @Valid OutputWithPath> outputsWithPaths,
+            final Collection<@Valid OutputWithPath> outputsWithPaths,
             @Nullable final OutputMetaData outputMetaData)
             throws StorageClientException {
 
@@ -294,7 +291,7 @@ public class AmazonS3StorageClient implements StorageClient {
     }
 
     @Override
-    public final InputStream read(final @NotNull String path, final boolean doUncompressIfNeeded)
+    public final InputStream read(final String path, final boolean doUncompressIfNeeded)
             throws StorageClientException {
         try {
             final var downloadRequest =
@@ -322,7 +319,7 @@ public class AmazonS3StorageClient implements StorageClient {
     }
 
     @Override
-    public boolean delete(final @NotNull String path, final boolean recursive)
+    public boolean delete(final String path, final boolean recursive)
             throws StorageClientException {
 
         final var existing = list(path, true);
@@ -364,7 +361,7 @@ public class AmazonS3StorageClient implements StorageClient {
     }
 
     @Override
-    public Collection<String> list(@NotNull final String path, final boolean recursive)
+    public Collection<String> list(final String path, final boolean recursive)
             throws StorageClientException {
         try {
             final var keys = new LinkedHashSet<String>();
@@ -407,13 +404,13 @@ public class AmazonS3StorageClient implements StorageClient {
     }
 
     @Override
-    public boolean exists(final @NotNull String path) throws StorageClientException {
+    public boolean exists(final String path) throws StorageClientException {
         /* NOTE: implemented using listObjects instead of headObject method as this method can also be used to check for the existence of sub-paths (i.e. 'directories') */
         return !list(path, false).isEmpty();
     }
 
     @Override
-    public String getSignedUrl(final @NotNull String path, final @NotNull OffsetDateTime expiry)
+    public String getSignedUrl(final String path, final OffsetDateTime expiry)
             throws StorageClientException {
         try {
             final PresignedGetObjectRequest presignedRequest;
@@ -459,7 +456,7 @@ public class AmazonS3StorageClient implements StorageClient {
     }
 
     @Override
-    public final String getUrl(final @NotNull String path) {
+    public final String getUrl(final String path) {
         throw new NotImplementedException(
                 "S3 does not support permanent share URLs? (Maximum is 7 days as per S3 spec)");
     }

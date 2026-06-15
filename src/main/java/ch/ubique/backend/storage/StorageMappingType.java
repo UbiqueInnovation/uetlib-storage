@@ -2,8 +2,6 @@ package ch.ubique.backend.storage;
 
 import ch.ubique.backend.storage.annotations.*;
 
-import jakarta.validation.constraints.NotNull;
-
 import java.lang.annotation.Annotation;
 
 public enum StorageMappingType {
@@ -42,5 +40,5 @@ public enum StorageMappingType {
         }
     };
 
-    public abstract @NotNull Class<? extends Annotation> mappingAnnotationType();
+    public abstract Class<? extends Annotation> mappingAnnotationType();
 }

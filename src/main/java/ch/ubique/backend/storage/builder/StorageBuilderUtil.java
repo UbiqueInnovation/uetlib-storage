@@ -9,8 +9,6 @@ import ch.ubique.backend.storage.StorageMappingType;
 import ch.ubique.backend.storage.annotations.*;
 import ch.ubique.backend.storage.invocation.*;
 
-import jakarta.validation.constraints.NotNull;
-
 import org.jetbrains.annotations.Contract;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +73,6 @@ public final class StorageBuilderUtil {
         return invocationHandlersByMethodName;
     }
 
-    @NotNull
     private static StorageMethodInfo findStorageMethodInfo(final Method storageMethod) {
         final var outputMappingMaybe = findAnnotation(storageMethod, OutputMapping.class);
         if (outputMappingMaybe.isPresent()) {
@@ -127,8 +124,8 @@ public final class StorageBuilderUtil {
                                 DeleteMapping.class.getSimpleName())));
     }
 
-    public static @NotNull Map<StorageMappingType, @NotNull List<StorageMethodInfo>>
-            getStorageMethodsByAnnotation(final Class<?> storageClass) {
+    public static Map<StorageMappingType, List<StorageMethodInfo>> getStorageMethodsByAnnotation(
+            final Class<?> storageClass) {
         return Arrays.stream(storageClass.getMethods())
                 .map(
                         method -> {
@@ -161,7 +158,7 @@ public final class StorageBuilderUtil {
                 .collect(Collectors.groupingBy(StorageMethodInfo::storageMappingType));
     }
 
-    private static void validateMappingMethod(@NotNull final StorageMethodInfo storageMethodInfo) {
+    private static void validateMappingMethod(final StorageMethodInfo storageMethodInfo) {
         final var mappingPath = storageMethodInfo.mappingPath();
         final var storageMethod = storageMethodInfo.storageMethod();
         final var storageMappingType = storageMethodInfo.storageMappingType();
@@ -285,8 +282,7 @@ public final class StorageBuilderUtil {
                         validParameterAnnotationTypeNames));
     }
 
-    private static void validateOutputMappingMethod(
-            @NotNull final StorageMethodInfo storageMethodInfo) {
+    private static void validateOutputMappingMethod(final StorageMethodInfo storageMethodInfo) {
         final var storageObjectParametersCount =
                 countParametersWithAnnotation(
                         storageMethodInfo.storageMethod(), StorageObject.class);
@@ -311,8 +307,7 @@ public final class StorageBuilderUtil {
         }
     }
 
-    private static void validateInputMappingMethod(
-            @NotNull final StorageMethodInfo storageMethodInfo) {
+    private static void validateInputMappingMethod(final StorageMethodInfo storageMethodInfo) {
         final var invalidReturnTypes = List.of(void.class);
         if (invalidReturnTypes.contains(storageMethodInfo.storageMethod().getReturnType())) {
             throw new IllegalArgumentException(
@@ -325,8 +320,7 @@ public final class StorageBuilderUtil {
         }
     }
 
-    private static void validateDeleteMappingMethod(
-            @NotNull final StorageMethodInfo storageMethodInfo) {
+    private static void validateDeleteMappingMethod(final StorageMethodInfo storageMethodInfo) {
         final var validReturnTypes = List.of(void.class, boolean.class);
         if (!validReturnTypes.contains(storageMethodInfo.storageMethod().getReturnType())) {
             throw new IllegalArgumentException(
@@ -339,8 +333,7 @@ public final class StorageBuilderUtil {
         }
     }
 
-    private static void validateListMappingMethod(
-            @NotNull final StorageMethodInfo storageMethodInfo) {
+    private static void validateListMappingMethod(final StorageMethodInfo storageMethodInfo) {
         final var validReturnTypes = List.of(Collection.class, List.class, Set.class, Stream.class);
         if (!validReturnTypes.contains(storageMethodInfo.storageMethod().getReturnType())) {
             throw new IllegalArgumentException(
@@ -353,8 +346,7 @@ public final class StorageBuilderUtil {
         }
     }
 
-    private static void validateExistsMappingMethod(
-            @NotNull final StorageMethodInfo storageMethodInfo) {
+    private static void validateExistsMappingMethod(final StorageMethodInfo storageMethodInfo) {
         final var validReturnTypes = List.of(boolean.class);
         if (!validReturnTypes.contains(storageMethodInfo.storageMethod().getReturnType())) {
             throw new IllegalArgumentException(
