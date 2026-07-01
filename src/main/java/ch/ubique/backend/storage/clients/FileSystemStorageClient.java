@@ -1,5 +1,6 @@
 package ch.ubique.backend.storage.clients;
 
+import ch.ubique.backend.core.io.FileProvider;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.exception.StorageClientException;
@@ -139,6 +140,11 @@ public class FileSystemStorageClient implements StorageClient {
         } catch (final IOException e) {
             throw StorageClientException.of(MessageFormat.format("failed to read {0}", file), e);
         }
+    }
+
+    @Override
+    public FileProvider fileProvider(final String path) {
+        return FileProvider.of(getCompletePath(path).toFile());
     }
 
     @Override

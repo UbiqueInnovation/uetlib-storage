@@ -1,5 +1,6 @@
 package ch.ubique.backend.storage.clients;
 
+import ch.ubique.backend.core.io.FileProvider;
 import ch.ubique.backend.core.utils.StringUtils;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
@@ -68,6 +69,11 @@ public class PrefixStorageClient implements StorageClient {
     public InputStream read(final String path, final boolean doUncompressIfNeeded)
             throws StorageClientException {
         return storageClient.read(prefixedPath(path), doUncompressIfNeeded);
+    }
+
+    @Override
+    public FileProvider fileProvider(final String path) {
+        return storageClient.fileProvider(prefixedPath(path));
     }
 
     @Override

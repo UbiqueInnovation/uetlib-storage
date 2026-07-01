@@ -1,5 +1,6 @@
 package ch.ubique.backend.storage;
 
+import ch.ubique.backend.core.io.FileProvider;
 import ch.ubique.backend.storage.clients.RetryStorageClient;
 import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.Output;
@@ -47,6 +48,14 @@ public interface StorageClient {
 
     default InputStream read(final String path) throws StorageClientException {
         return read(path, true);
+    }
+
+    /**
+     * Convience method to create a {@link FileProvider} for the given path. Automatic uncompression
+     * is disabled. 
+     */
+    default FileProvider fileProvider(final String path) {
+        return FileProvider.of(() -> read(path, false));
     }
 
     default boolean delete(final String path) throws StorageClientException {
