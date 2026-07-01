@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.2.1
+
+- Added `StorageClient.fileProvider(String path)` for convience. `FileSystemStorageClient` gives a
+  direct pointer to the file to avoid creating a temporary file from the input stream.
+
 ## 2.2.0
 
 ### Improvements
@@ -11,7 +16,8 @@
 ### Fixes
 
 - Null-marked it all
-- Fix S3 storage client list, now does paging to load all objects, as opposed to just the first page of max 1000
+- Fix S3 storage client list, now does paging to load all objects, as opposed to just the first page
+  of max 1000
   elements
 
 ## 2.0.4
@@ -20,7 +26,8 @@
 
 - Image size is now directly linked to image variant (can be read from outside)
 - Added original image upload method that takes byte[]
-- Added method overloads for processing that take image bytes instead of input stream (makes retry possible)
+- Added method overloads for processing that take image bytes instead of input stream (makes retry
+  possible)
 - Image processing option to convert the processed images to webp
 
 ## 2.0.0
@@ -46,7 +53,8 @@
 
 ### Fixes
 
-Make sure to use the correct header date formatter for `expires`, `best-before`, etc. in output metadata.
+Make sure to use the correct header date formatter for `expires`, `best-before`, etc. in output
+metadata.
 `RFC_1123_DATE_TIME` does not enforce two digits for day of month, as says it should.
 
 ## 1.2.5
@@ -73,7 +81,8 @@ Make sure to use the correct header date formatter for `expires`, `best-before`,
 
 ### Improvements
 
-- Split `StorageObjectTypeResolver` into `StorageObjectParameterResolver` and moved the other half to
+- Split `StorageObjectTypeResolver` into `StorageObjectParameterResolver` and moved the other half
+  to
   `uetlib-storage-spring-boot`.
 
 ## 1.2.0
