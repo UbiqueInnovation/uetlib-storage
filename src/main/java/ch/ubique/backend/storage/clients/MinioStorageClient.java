@@ -19,16 +19,11 @@ import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
 
 import io.minio.*;
+import io.minio.Http.Method;
 import io.minio.credentials.Provider;
 import io.minio.credentials.StaticProvider;
-import io.minio.errors.ErrorResponseException;
-import io.minio.errors.InsufficientDataException;
-import io.minio.errors.InternalException;
-import io.minio.errors.InvalidResponseException;
-import io.minio.errors.ServerException;
-import io.minio.errors.XmlParserException;
-import io.minio.http.Method;
-import io.minio.messages.DeleteObject;
+import io.minio.errors.*;
+import io.minio.messages.DeleteRequest;
 
 import jakarta.validation.Valid;
 
@@ -40,8 +35,6 @@ import org.jspecify.annotations.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.DirectoryNotEmptyException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.text.MessageFormat;
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -53,9 +46,11 @@ import java.util.*;
  */
 public class MinioStorageClient implements StorageClient {
 
+    private static final long EIGHT_MB = 8 * 1024 * 1024L;
+
     private final String bucket;
     private final MinioClient minioClient;
-    @Nullable private final OutputMetaDataProvider outputMetaDataProvider;
+    private final @Nullable OutputMetaDataProvider outputMetaDataProvider;
 
     public MinioStorageClient(
             final String bucket,
@@ -126,19 +121,30 @@ public class MinioStorageClient implements StorageClient {
             final String message, final Throwable cause) {
 
         final var causeMessage = cause.getMessage();
-        if (cause instanceof ErrorResponseException
-                && causeMessage != null
-                && causeMessage.contains("The specified key does not exist")) {
-            return new NonRetryableStorageClientException(message, cause);
-        }
-        if (cause instanceof InsufficientDataException
-                || cause instanceof InvalidResponseException
-                || cause instanceof ErrorResponseException
-                || cause instanceof InternalException
-                || cause instanceof ServerException) {
-            return new RetryableStorageClientException(message, cause);
-        }
-        return StorageClientException.of(message, cause);
+        return switch (cause) {
+            case final MinioException minioException -> {
+                final var minioCause = minioException.getCause();
+                yield switch (minioCause) {
+                    case null -> StorageClientException.of(message, minioException);
+                    case final ErrorResponseException ere
+                            when causeMessage != null
+                                    && causeMessage.contains("The specified key does not exist") ->
+                            new NonRetryableStorageClientException(message, ere);
+                    case final ErrorResponseException ere ->
+                            new RetryableStorageClientException(message, ere);
+                    case final InsufficientDataException ide ->
+                            new RetryableStorageClientException(message, ide);
+                    case final InvalidResponseException ire ->
+                            new RetryableStorageClientException(message, ire);
+                    case final InternalException ie ->
+                            new RetryableStorageClientException(message, ie);
+                    case final ServerException se ->
+                            new RetryableStorageClientException(message, se);
+                    default -> StorageClientException.of(message, minioCause);
+                };
+            }
+            default -> StorageClientException.of(message, cause);
+        };
     }
 
     @Override
@@ -167,15 +173,7 @@ public class MinioStorageClient implements StorageClient {
                             .userMetadata(createUserMetadata(metaData))
                             .build();
             minioClient.putObject(putObjectArgs);
-        } catch (final ErrorResponseException
-                | InsufficientDataException
-                | InternalException
-                | InvalidKeyException
-                | InvalidResponseException
-                | NoSuchAlgorithmException
-                | ServerException
-                | XmlParserException
-                | IOException e) {
+        } catch (final IOException | MinioException e) {
             throw storageClientException(
                     MessageFormat.format(
                             "failed to write for [path={0}, outputMetaData={1}, output={2}]",
@@ -205,15 +203,7 @@ public class MinioStorageClient implements StorageClient {
                             .build();
 
             minioClient.uploadObject(uploadObjectArgs);
-        } catch (final ErrorResponseException
-                | InsufficientDataException
-                | InternalException
-                | InvalidKeyException
-                | InvalidResponseException
-                | NoSuchAlgorithmException
-                | ServerException
-                | XmlParserException
-                | IOException e) {
+        } catch (final MinioException e) {
             throw storageClientException(
                     MessageFormat.format(
                             "failed to write for [path={0}, outputMetaData={1}, output={2}]",
@@ -240,7 +230,7 @@ public class MinioStorageClient implements StorageClient {
             // 8MiB (default in aws s3 cli, must be between 5MiB to 5GiB)
             // CAUTION: The upload is restricted to 10000 * partSize = 80GiB at the moment. We might
             // have to increase this at some point for unknown contentLength
-            return 8 * 1024 * 1024L;
+            return EIGHT_MB;
         }
 
         final var targetNumberOfParts = 200;
@@ -294,15 +284,7 @@ public class MinioStorageClient implements StorageClient {
             }
 
             return objectResponse;
-        } catch (final ErrorResponseException
-                | InsufficientDataException
-                | InternalException
-                | InvalidKeyException
-                | InvalidResponseException
-                | NoSuchAlgorithmException
-                | ServerException
-                | IOException
-                | XmlParserException e) {
+        } catch (final IOException | MinioException e) {
             throw storageClientException(
                     MessageFormat.format(
                             "failed to read for [path={0}, doUncompressIfNeeded={1}]",
@@ -326,8 +308,8 @@ public class MinioStorageClient implements StorageClient {
 
         final var objectsToDelete =
                 recursive
-                        ? existing.stream().map(DeleteObject::new).toList()
-                        : List.of(new DeleteObject(path));
+                        ? existing.stream().map(DeleteRequest.Object::new).toList()
+                        : List.of(new DeleteRequest.Object(path));
 
         final var results =
                 minioClient.removeObjects(
@@ -340,15 +322,7 @@ public class MinioStorageClient implements StorageClient {
             for (final var result : results) {
                 result.get();
             }
-        } catch (final ErrorResponseException
-                | InsufficientDataException
-                | InternalException
-                | InvalidKeyException
-                | InvalidResponseException
-                | NoSuchAlgorithmException
-                | ServerException
-                | XmlParserException
-                | IOException e) {
+        } catch (final MinioException e) {
             throw storageClientException(
                     MessageFormat.format(
                             "failed to delete for [path={0}, recursive={1}]", path, recursive),
@@ -374,15 +348,7 @@ public class MinioStorageClient implements StorageClient {
             for (final var object : objects) {
                 paths.add(object.get().objectName());
             }
-        } catch (final ErrorResponseException
-                | InsufficientDataException
-                | InternalException
-                | InvalidKeyException
-                | InvalidResponseException
-                | NoSuchAlgorithmException
-                | ServerException
-                | XmlParserException
-                | IOException e) {
+        } catch (final MinioException e) {
             throw storageClientException(
                     MessageFormat.format(
                             "failed to list for [mappingPath={0}, recursive={1}]", path, recursive),
@@ -426,15 +392,7 @@ public class MinioStorageClient implements StorageClient {
                             .bucket(bucket)
                             .object(path)
                             .build());
-        } catch (final ErrorResponseException
-                | InsufficientDataException
-                | InternalException
-                | InvalidKeyException
-                | InvalidResponseException
-                | NoSuchAlgorithmException
-                | ServerException
-                | XmlParserException
-                | IOException e) {
+        } catch (final MinioException e) {
             throw storageClientException(
                     MessageFormat.format(
                             "failed to get signed url for [mappingPath={0}, expiry={1}]",
@@ -453,15 +411,7 @@ public class MinioStorageClient implements StorageClient {
     public void createBucket(final String bucketName) throws StorageClientException {
         try {
             minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
-        } catch (final ErrorResponseException
-                | InsufficientDataException
-                | InternalException
-                | InvalidKeyException
-                | InvalidResponseException
-                | IOException
-                | NoSuchAlgorithmException
-                | ServerException
-                | XmlParserException e) {
+        } catch (final MinioException e) {
             throw storageClientException(
                     MessageFormat.format(
                             "failed to create bucket for [bucketName={0}]", bucketName),
