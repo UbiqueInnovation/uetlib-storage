@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2.3.0
+
+### Improvements
+
+- migrate to minio 9
+- updated `uetlib-parent` to
+  `2026.07.0`: [Changelog](https://github.com/UbiqueInnovation/uetlib-parent/blob/main/CHANGELOG.md#2026070)
+
 ## 2.2.1
 
 - Added `StorageClient.fileProvider(String path)` for convience. `FileSystemStorageClient` gives a
