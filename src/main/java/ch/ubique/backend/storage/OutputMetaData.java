@@ -1,5 +1,7 @@
 package ch.ubique.backend.storage;
 
+import static ch.ubique.backend.core.utils.OptionalUtils.ofNullable;
+
 import static io.netty.handler.codec.http.HttpHeaderValues.MAX_AGE;
 import static io.netty.handler.codec.http.HttpHeaderValues.S_MAXAGE;
 
@@ -15,7 +17,7 @@ import ch.ubique.backend.storage.output.Output;
 
 import com.google.common.net.HttpHeaders;
 
-import io.minio.messages.CannedAcl;
+import io.minio.messages.RestoreRequest.CannedAcl;
 
 import jakarta.validation.ValidationException;
 import jakarta.validation.constraints.NotBlank;
@@ -209,8 +211,8 @@ public final class OutputMetaData {
     }
 
     public Optional<String> createCannedAcl() {
-        return Optional.ofNullable(customAccessPolicy)
-                .or(() -> Optional.ofNullable(accessPolicy).map(CannedAcl::toString));
+        return ofNullable(customAccessPolicy)
+                .or(() -> ofNullable(accessPolicy).map(CannedAcl::toString));
     }
 
     public Optional<Instant> expiresAsInstant() {

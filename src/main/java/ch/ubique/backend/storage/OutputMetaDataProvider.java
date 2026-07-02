@@ -3,7 +3,7 @@ package ch.ubique.backend.storage;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 
-import io.minio.messages.CannedAcl;
+import io.minio.messages.RestoreRequest.CannedAcl;
 
 import org.jspecify.annotations.Nullable;
 

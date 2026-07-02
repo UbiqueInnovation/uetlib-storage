@@ -1,6 +1,7 @@
 package ch.ubique.backend.storage.exception;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.jspecify.annotations.Nullable;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -29,7 +30,7 @@ public abstract sealed class StorageClientException extends IOException
         return new NonRetryableStorageClientException(message, cause);
     }
 
-    private static boolean isRetryable(final Throwable cause) {
+    private static boolean isRetryable(final @Nullable Throwable cause) {
         if (cause == null) {
             return false;
         }
