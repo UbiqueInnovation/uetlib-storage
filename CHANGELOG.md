@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2.3.1
+
+### Fixes
+
+- Fixed minio (non)-retryable exception handling
+
 ## 2.3.0
 
 ### Improvements

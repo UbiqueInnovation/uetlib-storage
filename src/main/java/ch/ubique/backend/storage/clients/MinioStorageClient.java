@@ -120,30 +120,33 @@ public class MinioStorageClient implements StorageClient {
     public static StorageClientException storageClientException(
             final String message, final Throwable cause) {
 
+        if (!(cause instanceof final MinioException minioException)) {
+            return StorageClientException.of(message, cause);
+        }
+
         final var causeMessage = cause.getMessage();
-        return switch (cause) {
-            case final MinioException minioException -> {
-                final var minioCause = minioException.getCause();
-                yield switch (minioCause) {
-                    case null -> StorageClientException.of(message, minioException);
-                    case final ErrorResponseException ere
-                            when causeMessage != null
-                                    && causeMessage.contains("The specified key does not exist") ->
-                            new NonRetryableStorageClientException(message, ere);
-                    case final ErrorResponseException ere ->
-                            new RetryableStorageClientException(message, ere);
-                    case final InsufficientDataException ide ->
-                            new RetryableStorageClientException(message, ide);
-                    case final InvalidResponseException ire ->
-                            new RetryableStorageClientException(message, ire);
-                    case final InternalException ie ->
-                            new RetryableStorageClientException(message, ie);
-                    case final ServerException se ->
-                            new RetryableStorageClientException(message, se);
-                    default -> StorageClientException.of(message, minioCause);
-                };
+
+        return switch (minioException) {
+            case final ErrorResponseException ere
+                    when causeMessage != null
+                            && causeMessage.contains("The specified key does not exist") ->
+                    new NonRetryableStorageClientException(message, ere);
+            case final ErrorResponseException ere ->
+                    new RetryableStorageClientException(message, ere);
+            case final InsufficientDataException ide ->
+                    new RetryableStorageClientException(message, ide);
+            case final InvalidResponseException ire ->
+                    new RetryableStorageClientException(message, ire);
+            case final InternalException ie -> new RetryableStorageClientException(message, ie);
+            case final ServerException se -> new RetryableStorageClientException(message, se);
+            default -> {
+                final var childCause = minioException.getCause();
+                if (childCause != null) {
+                    yield storageClientException(message, childCause);
+                } else {
+                    yield StorageClientException.of(message, minioException);
+                }
             }
-            default -> StorageClientException.of(message, cause);
         };
     }
 
