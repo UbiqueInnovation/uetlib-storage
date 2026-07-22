@@ -52,7 +52,7 @@ public interface StorageClient {
 
     /**
      * Convience method to create a {@link FileProvider} for the given path. Automatic uncompression
-     * is disabled. 
+     * is disabled.
      */
     default FileProvider fileProvider(final String path) {
         return FileProvider.of(() -> read(path, false));
