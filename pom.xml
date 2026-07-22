@@ -19,6 +19,9 @@
         <uetlib-test.version>2.2.0</uetlib-test.version>
         <uetlib-testcontainers.version>2.1.0</uetlib-testcontainers.version>
         <uetlib-webp.version>0.0.10</uetlib-webp.version>
+        <!-- Sonar -->
+        <sonar.projectName>uetlib-storage</sonar.projectName>
+        <sonar.coverage.module>uetlib-storage</sonar.coverage.module>
     </properties>
 
     <dependencies>
