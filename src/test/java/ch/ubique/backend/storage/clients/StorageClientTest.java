@@ -128,8 +128,8 @@ class StorageClientTest {
         final var connectionString =
                 String.format(
                         "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;"
-                            + "AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;"
-                            + "BlobEndpoint=http://%s:%s/devstoreaccount1;",
+                                + "AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;"
+                                + "BlobEndpoint=http://%s:%s/devstoreaccount1;",
                         AZURE_BLOB_STORAGE_CONTAINER.getHost(), mappedPort);
 
         final var storageClient = new AzureBlobStorageClient("test", connectionString);
