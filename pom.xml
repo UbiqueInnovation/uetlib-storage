@@ -7,7 +7,7 @@
     <parent>
         <groupId>ch.ubique</groupId>
         <artifactId>uetlib-parent</artifactId>
-        <version>2026.07.2</version>
+        <version>2026.07.3</version>
     </parent>
 
     <artifactId>uetlib-storage</artifactId>
@@ -24,17 +24,40 @@
         <sonar.coverage.module>uetlib-storage</sonar.coverage.module>
     </properties>
 
-    <dependencies>
+        <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>ch.ubique</groupId>
+                <artifactId>uetlib-testcontainers</artifactId>
+                <version>${uetlib-testcontainers.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.ubique</groupId>
+                <artifactId>uetlib-test</artifactId>
+                <version>${uetlib-test.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.ubique</groupId>
+                <artifactId>uetlib-webp</artifactId>
+                <version>${uetlib-webp.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.ubique</groupId>
+                <artifactId>uetlib-core</artifactId>
+                <version>${uetlib-core.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+<dependencies>
         <!-- uetlib modules -->
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-core</artifactId>
-            <version>${uetlib-core.version}</version>
         </dependency>
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-webp</artifactId>
-            <version>${uetlib-webp.version}</version>
         </dependency>
 
         <!-- External storage clients -->
@@ -85,13 +108,11 @@
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-test</artifactId>
-            <version>${uetlib-test.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>ch.ubique</groupId>
             <artifactId>uetlib-testcontainers</artifactId>
-            <version>${uetlib-testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
