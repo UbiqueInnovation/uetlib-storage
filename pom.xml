@@ -15,41 +15,37 @@
     <packaging>jar</packaging>
 
     <properties>
-        <uetlib-core.version>2.4.0</uetlib-core.version>
-        <uetlib-test.version>2.2.0</uetlib-test.version>
-        <uetlib-testcontainers.version>2.1.0</uetlib-testcontainers.version>
-        <uetlib-webp.version>0.0.10</uetlib-webp.version>
         <!-- Sonar -->
         <sonar.projectName>uetlib-storage</sonar.projectName>
         <sonar.coverage.module>uetlib-storage</sonar.coverage.module>
     </properties>
 
-        <dependencyManagement>
+    <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>ch.ubique</groupId>
                 <artifactId>uetlib-testcontainers</artifactId>
-                <version>${uetlib-testcontainers.version}</version>
+                <version>2.1.0</version>
             </dependency>
             <dependency>
                 <groupId>ch.ubique</groupId>
                 <artifactId>uetlib-test</artifactId>
-                <version>${uetlib-test.version}</version>
+                <version>2.2.0</version>
             </dependency>
             <dependency>
                 <groupId>ch.ubique</groupId>
                 <artifactId>uetlib-webp</artifactId>
-                <version>${uetlib-webp.version}</version>
+                <version>0.0.10</version>
             </dependency>
             <dependency>
                 <groupId>ch.ubique</groupId>
                 <artifactId>uetlib-core</artifactId>
-                <version>${uetlib-core.version}</version>
+                <version>2.4.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
 
-<dependencies>
+    <dependencies>
         <!-- uetlib modules -->
         <dependency>
             <groupId>ch.ubique</groupId>

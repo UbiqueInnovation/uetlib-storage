@@ -228,9 +228,9 @@ class StorageImplementationTest {
                                 .basePath("storage")
                                 .build(),
                 "Storage interface NonStorageMappingMethodStorage is not valid: Method"
-                    + " 'NonStorageMappingMethodStorage::mappingMethod' is not annotated by one of"
-                    + " [@OutputMapping, @InputMapping, @DeleteMapping, @ListMapping,"
-                    + " @ExistsMapping]");
+                        + " 'NonStorageMappingMethodStorage::mappingMethod' is not annotated by one of"
+                        + " [@OutputMapping, @InputMapping, @DeleteMapping, @ListMapping,"
+                        + " @ExistsMapping]");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -255,8 +255,8 @@ class StorageImplementationTest {
                                 .basePath("storage")
                                 .build(),
                 "Storage InputMapping method InputMappingMethodIllegalReturnTypeVoid::mappingMethod"
-                    + " is not valid: @InputMapping mapping method return type must not be one of"
-                    + " [void]");
+                        + " is not valid: @InputMapping mapping method return type must not be one of"
+                        + " [void]");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -294,8 +294,8 @@ class StorageImplementationTest {
                                 .basePath("storage")
                                 .build(),
                 "Storage OutputMapping method"
-                    + " OutputMappingMethodTooManyStorageObject::mappingMethod is not valid: There"
-                    + " must be exactly one parameter annotated with @StorageObject, found 2");
+                        + " OutputMappingMethodTooManyStorageObject::mappingMethod is not valid: There"
+                        + " must be exactly one parameter annotated with @StorageObject, found 2");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
@@ -323,9 +323,9 @@ class StorageImplementationTest {
                                 .basePath("storage")
                                 .build(),
                 "Storage OutputMapping method"
-                    + " OutputMappingMethodIllegalParameterAnnotationTypeObject::mappingMethod is"
-                    + " not valid: There must be exactly one parameter annotated with"
-                    + " @StorageObject, found 0");
+                        + " OutputMappingMethodIllegalParameterAnnotationTypeObject::mappingMethod is"
+                        + " not valid: There must be exactly one parameter annotated with"
+                        + " @StorageObject, found 0");
 
         assertThrowsWithMessage(
                 IllegalArgumentException.class,
