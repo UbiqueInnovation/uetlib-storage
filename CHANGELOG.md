@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.3.3
+
+- latest uetlib parent
+- version updates
+
 ## 2.3.2
 
 - updated actions to not run tests twice for sonar
