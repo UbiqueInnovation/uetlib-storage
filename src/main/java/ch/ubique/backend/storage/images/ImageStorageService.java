@@ -14,6 +14,7 @@ import ch.ubique.backend.storage.output.InputStreamOutput;
 import com.drew.imaging.ImageProcessingException;
 import com.google.common.net.MediaType;
 
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
@@ -98,26 +99,48 @@ public class ImageStorageService {
             final byte[] originalImageBytes,
             final MediaType mediaType)
             throws IOException, ImageProcessingException {
-        return processImageFromOriginalBytes(generatePath, originalImageBytes, mediaType, false);
+        final BufferedImage original = ImageUtils.imageFromBytes(originalImageBytes);
+        try {
+            return processImageFromDecodedOriginal(generatePath, original, mediaType, false);
+        } finally {
+            original.flush();
+        }
     }
 
     public BlurHashRepresentation processImageFromOriginalBytesConvertToWebp(
             final Function<ImageVariant, String> generatePath, final byte[] originalImageBytes)
             throws IOException, ImageProcessingException {
-        return processImageFromOriginalBytes(
-                generatePath, originalImageBytes, MediaType.WEBP, true);
+        final BufferedImage original = ImageUtils.imageFromBytes(originalImageBytes);
+        try {
+            return processImageFromDecodedOriginal(generatePath, original, MediaType.WEBP, true);
+        } finally {
+            original.flush();
+        }
     }
 
-    private BlurHashRepresentation processImageFromOriginalBytes(
+    /**
+     * Same as {@link #processImageFromOriginalBytesConvertToWebp}, but takes an already-decoded
+     * image. Caller retains ownership of {@code original} and is responsible for flushing it.
+     *
+     * <p>Note: this method scales {@code original} via {@link ImageUtils#scaleAndFlush}, which
+     * flushes {@code original} as a side effect. Callers must not rely on {@code original} after
+     * calling this method.
+     */
+    public BlurHashRepresentation processImageFromDecodedOriginalConvertToWebp(
+            final Function<ImageVariant, String> generatePath, final BufferedImage original)
+            throws IOException {
+        return processImageFromDecodedOriginal(generatePath, original, MediaType.WEBP, true);
+    }
+
+    private BlurHashRepresentation processImageFromDecodedOriginal(
             final Function<ImageVariant, String> generatePath,
-            final byte[] originalImageBytes,
+            final BufferedImage original,
             final MediaType mediaType,
             final boolean convertToWebp)
-            throws IOException, ImageProcessingException {
+            throws IOException {
         final var hires =
                 ImageUtils.scaleAndFlush(
-                        ImageUtils.imageFromBytes(originalImageBytes),
-                        requireNonNull(ImageVariant.HIRES.getDefaultSize()));
+                        original, requireNonNull(ImageVariant.HIRES.getDefaultSize()));
 
         final byte[] hiresBytes =
                 convertToWebp
