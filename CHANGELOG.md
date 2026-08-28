@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.3.4
+
+- allow processing image directly from buffered image to avoid decoding the original image multiple times. `processImageFromOriginalBytesConvertToWebp` -> `processImageFromDecodedOriginalConvertToWebp`
+
 ## 2.3.3
 
 - latest uetlib parent
