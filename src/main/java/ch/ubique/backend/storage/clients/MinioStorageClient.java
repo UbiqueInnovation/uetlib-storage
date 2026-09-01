@@ -27,6 +27,7 @@ import io.minio.messages.DeleteRequest;
 
 import jakarta.validation.Valid;
 
+import okhttp3.Dispatcher;
 import okhttp3.OkHttpClient;
 
 import org.apache.commons.lang3.NotImplementedException;
@@ -47,6 +48,8 @@ import java.util.*;
 public class MinioStorageClient implements StorageClient {
 
     private static final long EIGHT_MB = 8 * 1024 * 1024L;
+    static final int DEFAULT_MAX_REQUESTS = 256;
+    static final int DEFAULT_MAX_REQUESTS_PER_HOST = 64;
 
     private final String bucket;
     private final MinioClient minioClient;
@@ -61,19 +64,29 @@ public class MinioStorageClient implements StorageClient {
         this.bucket = bucket;
         this.outputMetaDataProvider = outputMetaDataProvider;
         final var timeoutOrDefault = Objects.requireNonNullElse(timeout, Duration.ofSeconds(15));
-        final var httpClient =
-                new OkHttpClient()
-                        .newBuilder()
-                        .connectTimeout(timeoutOrDefault)
-                        .readTimeout(timeoutOrDefault)
-                        .writeTimeout(timeoutOrDefault)
-                        .build();
+        final var httpClient = createHttpClient(timeoutOrDefault);
         minioClient =
                 MinioClient.builder()
                         .endpoint(endpoint)
                         .credentialsProvider(credentialsProvider)
                         .httpClient(httpClient)
                         .build();
+    }
+
+    static OkHttpClient createHttpClient(final Duration timeout) {
+        final var dispatcher = new Dispatcher();
+        dispatcher.setMaxRequests(DEFAULT_MAX_REQUESTS);
+        dispatcher.setMaxRequestsPerHost(DEFAULT_MAX_REQUESTS_PER_HOST);
+
+        return new OkHttpClient()
+                .newBuilder()
+                .dispatcher(dispatcher)
+                .connectTimeout(timeout)
+                .readTimeout(timeout)
+                .writeTimeout(timeout)
+                // Overall cap per HTTP call.
+                .callTimeout(timeout.multipliedBy(2))
+                .build();
     }
 
     public MinioStorageClient(
