@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 2.3.5
+
+### Fixes
+
+- Increase the default OkHttp dispatcher limits used by `MinioStorageClient` to avoid same-host
+  dispatcher starvation when failed multipart uploads enqueue abort requests from OkHttp callbacks.
+
 ## 2.3.4
 
 - allow processing image directly from buffered image to avoid decoding the original image multiple times. `processImageFromOriginalBytesConvertToWebp` -> `processImageFromDecodedOriginalConvertToWebp`
