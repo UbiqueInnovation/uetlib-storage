@@ -64,10 +64,10 @@ class StorageClientTest {
                             "--skipApiVersionCheck");
 
     private static final GenericContainer<?> MINIO_CONTAINER =
-            new GenericContainer<>("minio/minio")
+            new GenericContainer<>("cgr.dev/chainguard/minio:latest")
                     .withImagePullPolicy(PullPolicy.ageBased(Duration.ofDays(30)))
-                    .withEnv("MINIO_ACCESS_KEY", "test")
-                    .withEnv("MINIO_SECRET_KEY", "test1234")
+                    .withEnv("MINIO_ROOT_USER", "test")
+                    .withEnv("MINIO_ROOT_PASSWORD", "test1234")
                     .withCommand("server /data")
                     .withExposedPorts(9000)
                     .waitingFor(
