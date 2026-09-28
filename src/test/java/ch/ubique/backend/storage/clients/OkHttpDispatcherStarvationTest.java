@@ -35,8 +35,7 @@ class OkHttpDispatcherStarvationTest {
 
     @Test
     @Timeout(10)
-    void defaultDispatcherStarvesNestedSameHostCallsWhenCallbacksWaitForThem()
-            throws Exception {
+    void defaultDispatcherStarvesNestedSameHostCallsWhenCallbacksWaitForThem() throws Exception {
         try (final var scenario = new Scenario(defaultClient())) {
             scenario.startCalls(OKHTTP_DEFAULT_MAX_REQUESTS_PER_HOST);
 
@@ -131,78 +130,102 @@ class OkHttpDispatcherStarvationTest {
             this(client, false);
         }
 
-        private Scenario(final OkHttpClient client, final boolean waitForeverForAbort) throws IOException {
+        private Scenario(final OkHttpClient client, final boolean waitForeverForAbort)
+                throws IOException {
             this.client = client;
             this.waitForeverForAbort = waitForeverForAbort;
             this.serverExecutor = Executors.newCachedThreadPool();
             this.callbacksEntered = new CountDownLatch(OKHTTP_DEFAULT_MAX_REQUESTS_PER_HOST);
             this.abortCallsEnqueued = new CountDownLatch(OKHTTP_DEFAULT_MAX_REQUESTS_PER_HOST);
             this.callbacksDone = new CountDownLatch(OKHTTP_DEFAULT_MAX_REQUESTS_PER_HOST);
-            this.server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
-            server.createContext("/part", exchange -> {
-                final var body = "part".getBytes();
-                exchange.sendResponseHeaders(500, body.length);
-                exchange.getResponseBody().write(body);
-                exchange.close();
-            });
-            server.createContext("/abort", exchange -> {
-                abortRequestsSeen.incrementAndGet();
-                exchange.sendResponseHeaders(204, -1);
-                exchange.close();
-            });
+            this.server =
+                    HttpServer.create(
+                            new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
+            server.createContext(
+                    "/part",
+                    exchange -> {
+                        final var body = "part".getBytes();
+                        exchange.sendResponseHeaders(500, body.length);
+                        exchange.getResponseBody().write(body);
+                        exchange.close();
+                    });
+            server.createContext(
+                    "/abort",
+                    exchange -> {
+                        abortRequestsSeen.incrementAndGet();
+                        exchange.sendResponseHeaders(204, -1);
+                        exchange.close();
+                    });
             server.setExecutor(serverExecutor);
             server.start();
-            this.baseUrl = "http://" + server.getAddress().getHostString() + ":" + server.getAddress().getPort();
+            this.baseUrl =
+                    "http://"
+                            + server.getAddress().getHostString()
+                            + ":"
+                            + server.getAddress().getPort();
         }
 
         private void startCalls(final int count) {
             for (int i = 0; i < count; i++) {
-                client.newCall(request("/part")).enqueue(new Callback() {
-                    @Override
-                    public void onFailure(final Call call, final IOException e) {
-                        unexpectedFailure.compareAndSet(null, e);
-                        callbackFailures.incrementAndGet();
-                        callbacksDone.countDown();
-                    }
+                client.newCall(request("/part"))
+                        .enqueue(
+                                new Callback() {
+                                    @Override
+                                    public void onFailure(final Call call, final IOException e) {
+                                        unexpectedFailure.compareAndSet(null, e);
+                                        callbackFailures.incrementAndGet();
+                                        callbacksDone.countDown();
+                                    }
 
-                    @Override
-                    public void onResponse(final Call call, final Response response) throws IOException {
-                        response.close();
-                        callbacksEntered.countDown();
-                        try {
-                            if (!callbacksEntered.await(2, TimeUnit.SECONDS)) {
-                                throw new AssertionError("callbacks did not all enter");
-                            }
+                                    @Override
+                                    public void onResponse(final Call call, final Response response)
+                                            throws IOException {
+                                        response.close();
+                                        callbacksEntered.countDown();
+                                        try {
+                                            if (!callbacksEntered.await(2, TimeUnit.SECONDS)) {
+                                                throw new AssertionError(
+                                                        "callbacks did not all enter");
+                                            }
 
-                            final var abortCompleted = new CompletableFuture<Void>();
-                            client.newCall(request("/abort")).enqueue(new Callback() {
-                                @Override
-                                public void onFailure(final Call call, final IOException e) {
-                                    abortCompleted.completeExceptionally(e);
-                                }
+                                            final var abortCompleted =
+                                                    new CompletableFuture<Void>();
+                                            client.newCall(request("/abort"))
+                                                    .enqueue(
+                                                            new Callback() {
+                                                                @Override
+                                                                public void onFailure(
+                                                                        final Call call,
+                                                                        final IOException e) {
+                                                                    abortCompleted
+                                                                            .completeExceptionally(
+                                                                                    e);
+                                                                }
 
-                                @Override
-                                public void onResponse(final Call call, final Response response) {
-                                    response.close();
-                                    abortCompleted.complete(null);
-                                }
-                            });
-                            abortCallsEnqueued.countDown();
-                            if (waitForeverForAbort) {
-                                abortCompleted.join();
-                            } else {
-                                abortCompleted.get(2, TimeUnit.SECONDS);
-                            }
-                        } catch (final Exception e) {
-                            if (!call.isCanceled()) {
-                                unexpectedFailure.compareAndSet(null, e);
-                                callbackFailures.incrementAndGet();
-                            }
-                        } finally {
-                            callbacksDone.countDown();
-                        }
-                    }
-                });
+                                                                @Override
+                                                                public void onResponse(
+                                                                        final Call call,
+                                                                        final Response response) {
+                                                                    response.close();
+                                                                    abortCompleted.complete(null);
+                                                                }
+                                                            });
+                                            abortCallsEnqueued.countDown();
+                                            if (waitForeverForAbort) {
+                                                abortCompleted.join();
+                                            } else {
+                                                abortCompleted.get(2, TimeUnit.SECONDS);
+                                            }
+                                        } catch (final Exception e) {
+                                            if (!call.isCanceled()) {
+                                                unexpectedFailure.compareAndSet(null, e);
+                                                callbackFailures.incrementAndGet();
+                                            }
+                                        } finally {
+                                            callbacksDone.countDown();
+                                        }
+                                    }
+                                });
             }
         }
 
