@@ -2,12 +2,14 @@ package ch.ubique.backend.storage.clients;
 
 import static java.util.Objects.*;
 
+import ch.ubique.backend.storage.CopyOptions;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.exception.RetryableStorageClientException;
 import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
+import ch.ubique.backend.storage.utils.CopyUtils;
 
 import com.pivovarit.function.ThrowingRunnable;
 
@@ -56,6 +58,14 @@ public class RetryStorageClient implements StorageClient {
     @Override
     public StorageClient withoutRetry() {
         return storageClient;
+    }
+
+    @Override
+    public void copy(
+            final String sourcePath, final String destinationPath, final CopyOptions options)
+            throws StorageClientException {
+        CopyUtils.checkPaths(sourcePath, destinationPath);
+        storageClient.copy(sourcePath, destinationPath, options);
     }
 
     @Override

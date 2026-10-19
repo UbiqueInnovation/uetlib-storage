@@ -2,9 +2,11 @@ package ch.ubique.backend.storage;
 
 import ch.ubique.backend.core.io.FileProvider;
 import ch.ubique.backend.storage.clients.RetryStorageClient;
+import ch.ubique.backend.storage.exception.NonRetryableStorageClientException;
 import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
+import ch.ubique.backend.storage.utils.CopyUtils;
 
 import org.jspecify.annotations.Nullable;
 import org.springframework.core.retry.RetryTemplate;
@@ -14,6 +16,32 @@ import java.time.OffsetDateTime;
 import java.util.Collection;
 
 public interface StorageClient {
+
+    /**
+     * Copy one object within this client, overwriting the destination without changing the source.
+     * Preserves stored bytes, HTTP properties and user metadata, including absent properties.
+     * Returns only after completion. Identical paths and unsupported providers fail explicitly.
+     * Provider size limits apply.
+     */
+    default void copy(final String sourcePath, final String destinationPath)
+            throws StorageClientException {
+        copy(sourcePath, destinationPath, CopyOptions.defaults());
+    }
+
+    /**
+     * Copy with an explicit destination access policy and timeout. No upload defaults are applied.
+     * Failures may leave a destination behind; reconcile it before retrying an uncertain outcome.
+     * The default preserves compatibility with external implementations without losing metadata.
+     */
+    default void copy(
+            final String sourcePath, final String destinationPath, final CopyOptions options)
+            throws StorageClientException {
+        CopyUtils.checkPaths(sourcePath, destinationPath);
+        throw new NonRetryableStorageClientException(
+                "Native copy is not supported by " + getClass().getName(),
+                new UnsupportedOperationException(
+                        "Native copy is not implemented. Consider read the content and write back to storage."));
+    }
 
     void write(Output output, String path, @Nullable OutputMetaData outputMetaData)
             throws StorageClientException;
