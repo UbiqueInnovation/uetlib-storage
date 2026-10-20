@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## Unreleased
+## 2.4.0
 
 - Add native single-object `StorageClient.copy` for S3, Azure block blobs and local files.
 

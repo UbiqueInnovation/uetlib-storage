@@ -40,7 +40,7 @@ public interface StorageClient {
         throw new NonRetryableStorageClientException(
                 "Native copy is not supported by " + getClass().getName(),
                 new UnsupportedOperationException(
-                        "Native copy is not implemented. Consider read the content and write back to storage."));
+                        "Native copy not implemented. Consider reading the content and writing it back."));
     }
 
     void write(Output output, String path, @Nullable OutputMetaData outputMetaData)
