@@ -226,14 +226,20 @@ class StorageClientTest {
         assertThatCollection(storageClient.list("bar/"))
                 .containsExactlyInAnyOrderElementsOf(Set.of("bar/foo1", "bar/foo2"));
 
-        assertDoesNotThrow(() -> storageClient.delete("bar/nonExisting"));
-        assertDoesNotThrow(() -> storageClient.delete("nonExisting/bar"));
-        assertDoesNotThrow(() -> storageClient.delete("bar/foo1"));
+        assertTrue(storageClient.exists("bar"));
+        assertFalse(storageClient.exists("bar/nonExisting"));
+        // AmazonS3StorageClient always returns true from delete
+        final var reportsDeleted = !isAmazonS3(storageClient);
+        assertNotEquals(reportsDeleted, storageClient.delete("bar/nonExisting"));
+        assertNotEquals(reportsDeleted, storageClient.delete("nonExisting/bar"));
+        assertNotEquals(reportsDeleted, storageClient.delete("nonExisting/"));
+        assertTrue(storageClient.delete("bar/foo1"));
         assertFalse(storageClient.exists("bar/foo1"));
         assertThatCollection(storageClient.list(true))
                 .containsExactlyInAnyOrderElementsOf(Set.of("foo", "bar/foo2"));
 
         assertThrows(IOException.class, () -> storageClient.delete("bar"));
+        assertThrows(IOException.class, () -> storageClient.delete("bar/"));
         assertTrue(storageClient.exists("bar/"));
         assertTrue(storageClient.exists("bar/foo2"));
         assertThatCollection(storageClient.list())
@@ -247,7 +253,9 @@ class StorageClientTest {
         assertThatCollection(storageClient.list())
                 .containsExactlyInAnyOrderElementsOf(Set.of("foo"));
 
-        assertDoesNotThrow(() -> storageClient.delete("foo"));
+        assertTrue(storageClient.delete("foo"));
+        assertNotEquals(reportsDeleted, storageClient.delete("foo"));
+        assertFalse(storageClient.exists("foo"));
         assertTrue(storageClient.list().isEmpty());
 
         storageClient.write(
@@ -349,6 +357,20 @@ class StorageClientTest {
             }
         }
 
+        // Folder marker objects (zero-byte objects with a key ending in "/") can be deleted
+        if (isMinio(storageClient)) {
+            storageClient.write(new ByteOutput(new byte[0]), "marker/");
+            assertTrue(storageClient.exists("marker/"));
+            assertTrue(storageClient.delete("marker/"));
+            assertFalse(storageClient.exists("marker/"));
+
+            storageClient.write(new ByteOutput(new byte[0]), "marker/");
+            storageClient.write(new ByteOutput(new byte[0]), "marker/child");
+            assertThrows(IOException.class, () -> storageClient.delete("marker/"));
+            assertTrue(storageClient.delete("marker/", true));
+            assertFalse(storageClient.exists("marker/"));
+        }
+
         // Cleanup for the next run
         assertDoesNotThrow(() -> storageClient.delete("", true));
     }
@@ -363,6 +385,18 @@ class StorageClientTest {
         return storageClient instanceof AzureBlobStorageClient
                 || storageClient instanceof final RetryStorageClient r && isAzure(r.delegate())
                 || storageClient instanceof final PrefixStorageClient p && isAzure(p.delegate());
+    }
+
+    private static boolean isMinio(final StorageClient storageClient) {
+        return storageClient instanceof MinioStorageClient
+                || storageClient instanceof final RetryStorageClient r && isMinio(r.delegate())
+                || storageClient instanceof final PrefixStorageClient p && isMinio(p.delegate());
+    }
+
+    private static boolean isAmazonS3(final StorageClient storageClient) {
+        return storageClient instanceof AmazonS3StorageClient
+                || storageClient instanceof final RetryStorageClient r && isAmazonS3(r.delegate())
+                || storageClient instanceof final PrefixStorageClient p && isAmazonS3(p.delegate());
     }
 
     private static boolean isPrefix(final StorageClient storageClient) {
