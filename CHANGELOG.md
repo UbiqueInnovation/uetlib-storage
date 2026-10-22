@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 2.4.1
+
+### Improvements
+
+- `MinioStorageClient` (and therefore `CloudflareR2StorageClient`) uses cheaper S3 operations:
+    - `delete(path)` / `delete(path, false)` checks exact key with `HeadObject`, deletes with a single `DeleteObject`
+      (free on R2), and falls back to `list` calls.
+    - `exists(path)` checks exact key (`HeadObject`) and falls back to `list` calls.
+
+### Behavior changes
+
+- `MinioStorageClient.delete` now returns `false` if nothing was deleted. `AmazonS3StorageClient` still always
+  returns `true`.
+- Non-recursive delete of an existing key now succeeds even if other keys share it as prefix (e.g. `foo` next to
+  `foo.bak`); previously it threw "cannot delete non-empty directory".
+    - Non-recursive `delete` and `exists` need read permission (`s3:GetObject`) (`HeadObject`). Delete/write-only
+      credentials fail. On AWS S3, credentials without `s3:ListBucket` get `403` instead of `404` for missing keys,
+      which is reported as an error.
+
 ## 2.4.0
 
 - Add native single-object `StorageClient.copy` for S3, Azure block blobs and local files.
@@ -13,7 +32,8 @@
 
 ## 2.3.4
 
-- allow processing image directly from buffered image to avoid decoding the original image multiple times. `processImageFromOriginalBytesConvertToWebp` -> `processImageFromDecodedOriginalConvertToWebp`
+- allow processing image directly from buffered image to avoid decoding the original image multiple times.
+  `processImageFromOriginalBytesConvertToWebp` -> `processImageFromDecodedOriginalConvertToWebp`
 
 ## 2.3.3
 

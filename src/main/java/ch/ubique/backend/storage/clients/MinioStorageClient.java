@@ -312,20 +312,51 @@ public class MinioStorageClient implements StorageClient {
     @Override
     public final boolean delete(final String path, final boolean recursive)
             throws StorageClientException {
+        if (recursive) {
+            return deleteRecursive(path);
+        }
+        return deleteNonRecursive(path);
+    }
 
+    private boolean deleteNonRecursive(final String path) throws StorageClientException {
+        // HeadObject + DeleteObject are cheaper than ListObjects + DeleteObjects on e.g. R2
+        if (objectExists(path)) {
+            removeObject(path);
+            return true;
+        }
+
+        // If we arrive here, no object matching the path exactly was found
         final var existing = list(path, true);
-
-        if (!recursive && existing.stream().anyMatch(object -> !object.equals(path))) {
+        if (existing.stream().anyMatch(object -> !object.equals(path))) {
             throw storageClientException(
                     MessageFormat.format(
                             "cannot delete non-empty directory. [path={0}, recursive=false]", path),
                     new DirectoryNotEmptyException(path));
         }
+        if (existing.contains(path)) {
+            removeObject(path);
+            return true;
+        }
+        return false;
+    }
 
+    private void removeObject(final String path) throws StorageClientException {
+        try {
+            minioClient.removeObject(
+                    RemoveObjectArgs.builder().bucket(bucket).object(path).build());
+        } catch (final MinioException e) {
+            throw storageClientException(
+                    MessageFormat.format("failed to delete for [path={0}, recursive=false]", path),
+                    e);
+        }
+    }
+
+    private boolean deleteRecursive(final String path) throws StorageClientException {
         final var objectsToDelete =
-                recursive
-                        ? existing.stream().map(DeleteRequest.Object::new).toList()
-                        : List.of(new DeleteRequest.Object(path));
+                list(path, true).stream().map(DeleteRequest.Object::new).toList();
+        if (objectsToDelete.isEmpty()) {
+            return false;
+        }
 
         final var results =
                 minioClient.removeObjects(
@@ -340,12 +371,33 @@ public class MinioStorageClient implements StorageClient {
             }
         } catch (final MinioException e) {
             throw storageClientException(
-                    MessageFormat.format(
-                            "failed to delete for [path={0}, recursive={1}]", path, recursive),
+                    MessageFormat.format("failed to delete for [path={0}, recursive=true]", path),
                     e);
         }
 
         return true;
+    }
+
+    private boolean objectExists(final String path) throws StorageClientException {
+        if (path.isEmpty() || path.endsWith("/")) {
+            return false;
+        }
+        try {
+            minioClient.statObject(StatObjectArgs.builder().bucket(bucket).object(path).build());
+            return true;
+        } catch (final ErrorResponseException e) {
+            final var code = e.errorResponse().code();
+            if ("NoSuchKey".equals(code)
+                    || "NoSuchObject".equals(code)
+                    || (e.response() != null && e.response().code() == 404)) {
+                return false;
+            }
+            throw storageClientException(
+                    MessageFormat.format("failed to stat for [path={0}]", path), e);
+        } catch (final MinioException e) {
+            throw storageClientException(
+                    MessageFormat.format("failed to stat for [path={0}]", path), e);
+        }
     }
 
     @Override
@@ -375,7 +427,7 @@ public class MinioStorageClient implements StorageClient {
 
     @Override
     public boolean exists(final String path) throws StorageClientException {
-        return !list(path, false).isEmpty();
+        return objectExists(path) || !list(path, false).isEmpty();
     }
 
     @Override
