@@ -1,6 +1,7 @@
 package ch.ubique.backend.storage.clients;
 
 import ch.ubique.backend.core.executor.VirtualThreadUtils;
+import ch.ubique.backend.storage.CopyOptions;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
@@ -8,15 +9,19 @@ import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
+import ch.ubique.backend.storage.utils.CopyUtils;
 
 import com.azure.core.http.HttpClient;
+import com.azure.core.http.RequestConditions;
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.core.util.Context;
 import com.azure.core.util.HttpClientOptions;
+import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.*;
+import com.azure.storage.blob.options.BlobCopyFromUrlOptions;
 import com.azure.storage.blob.options.BlobParallelUploadOptions;
 import com.azure.storage.blob.sas.BlobSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
@@ -81,6 +86,104 @@ public class AzureBlobStorageClient implements StorageClient {
         this.blobContainerClient = blobServiceClient.getBlobContainerClient(container);
         this.outputMetaDataProvider = outputMetaDataProvider;
         this.blockSize = blockSize;
+    }
+
+    @Override
+    public void copy(
+            final String sourcePath, final String destinationPath, final CopyOptions options)
+            throws StorageClientException {
+        CopyUtils.checkPaths(sourcePath, destinationPath);
+        final long deadline = System.nanoTime() + options.timeout().toNanos();
+        final var source = blobContainerClient.getBlobClient(sourcePath);
+        final var destination = blobContainerClient.getBlobClient(destinationPath);
+        String copyId = null;
+        try {
+            final var properties =
+                    source.getPropertiesWithResponse(
+                                    null, CopyUtils.remaining(deadline), Context.NONE)
+                            .getValue();
+            if (properties.getBlobType() != BlobType.BLOCK_BLOB
+                    || properties.getBlobSize() > 256L * 1024 * 1024) {
+                throw CopyUtils.failure(
+                        "Azure synchronous copy supports block blobs up to 256 MiB",
+                        new IllegalArgumentException(sourcePath));
+            }
+            // The per-call timeout covers SDK retries and backoff within the shared deadline.
+            final var response =
+                    destination.copyFromUrlWithResponse(
+                            new BlobCopyFromUrlOptions(source.getBlobUrl())
+                                    .setSourceRequestConditions(
+                                            new RequestConditions()
+                                                    .setIfMatch(properties.getETag())),
+                            CopyUtils.remaining(deadline),
+                            Context.NONE);
+            copyId = response.getValue();
+            awaitCopy(
+                    destination,
+                    copyId,
+                    response.getHeaders().getValue("x-ms-copy-status"),
+                    deadline);
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw copyFailure(destination, copyId, e);
+        } catch (final StorageClientException | RuntimeException e) {
+            throw copyFailure(destination, copyId, e);
+        }
+    }
+
+    private static void awaitCopy(
+            final BlobClient destination,
+            final String copyId,
+            @Nullable final String initialStatus,
+            final long deadline)
+            throws StorageClientException, InterruptedException {
+        String status = initialStatus;
+        while (!"success".equals(status)) {
+            if (status != null && !"pending".equals(status)) {
+                throw CopyUtils.failure(
+                        "Azure copy ended with status " + status,
+                        new IllegalStateException(copyId));
+            }
+            final var properties =
+                    destination
+                            .getPropertiesWithResponse(
+                                    null, CopyUtils.remaining(deadline), Context.NONE)
+                            .getValue();
+            if (!copyId.equals(properties.getCopyId())) {
+                throw CopyUtils.failure(
+                        "Azure destination copy ID changed", new IllegalStateException(copyId));
+            }
+            status =
+                    properties.getCopyStatus() == null
+                            ? "unknown"
+                            : properties.getCopyStatus().toString();
+            if ("pending".equals(status)) {
+                Thread.sleep(Math.clamp(CopyUtils.remaining(deadline).toMillis(), 1L, 250L));
+            }
+        }
+        CopyUtils.remaining(deadline);
+    }
+
+    private static StorageClientException copyFailure(
+            final BlobClient destination, @Nullable final String copyId, final Exception cause) {
+        final var failure =
+                CopyUtils.failure(
+                        "Azure copy failed [destination="
+                                + destination.getBlobName()
+                                + ", copyId="
+                                + copyId
+                                + "]. Destination may be incomplete or the request may still be running; inspect before retrying",
+                        cause);
+        if (copyId != null) {
+            try {
+                // Bounded cleanup grace period; abort only our job, never delete the destination.
+                destination.abortCopyFromUrlWithResponse(
+                        copyId, null, Duration.ofSeconds(5), Context.NONE);
+            } catch (final RuntimeException abortFailure) {
+                failure.addSuppressed(abortFailure);
+            }
+        }
+        return failure;
     }
 
     private static BlobHttpHeaders createHeaders(

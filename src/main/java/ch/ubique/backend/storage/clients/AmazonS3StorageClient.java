@@ -3,6 +3,7 @@ package ch.ubique.backend.storage.clients;
 import ch.ubique.backend.core.executor.VirtualThreadUtils;
 import ch.ubique.backend.core.http.header.HttpHeader;
 import ch.ubique.backend.core.utils.StreamUtils;
+import ch.ubique.backend.storage.CopyOptions;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.OutputMetaDataProvider;
 import ch.ubique.backend.storage.StorageClient;
@@ -16,6 +17,7 @@ import ch.ubique.backend.storage.output.GZipOutput;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
+import ch.ubique.backend.storage.utils.CopyUtils;
 
 import jakarta.validation.Valid;
 
@@ -25,6 +27,7 @@ import org.jspecify.annotations.Nullable;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider;
+import software.amazon.awssdk.awscore.AwsRequestOverrideConfiguration;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
@@ -50,6 +53,8 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public class AmazonS3StorageClient implements StorageClient {
+
+    private static final long MAX_COPY_SIZE = 5L * 1024 * 1024 * 1024;
 
     private static final String DEFAULT_REGION = "eu-central-1";
     private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(15);
@@ -191,6 +196,76 @@ public class AmazonS3StorageClient implements StorageClient {
             return new RetryableStorageClientException(message, throwable);
         }
         return StorageClientException.of(message, throwable);
+    }
+
+    @Override
+    public void copy(
+            final String sourcePath, final String destinationPath, final CopyOptions options)
+            throws StorageClientException {
+        CopyUtils.checkPaths(sourcePath, destinationPath);
+        final long deadline = System.nanoTime() + options.timeout().toNanos();
+        try {
+            final var source =
+                    awaitCopy(
+                            s3AsyncClient.headObject(
+                                    HeadObjectRequest.builder()
+                                            .bucket(bucket)
+                                            .key(sourcePath)
+                                            .overrideConfiguration(
+                                                    copyRequestConfiguration(
+                                                            CopyUtils.remaining(deadline)))
+                                            .build()),
+                            deadline);
+            if (source.contentLength() > MAX_COPY_SIZE) {
+                throw CopyUtils.failure(
+                        "S3 native copy supports at most 5 GiB",
+                        new IllegalArgumentException(sourcePath));
+            }
+            final var accessPolicy = options.accessPolicy();
+            final var request =
+                    CopyObjectRequest.builder()
+                            .sourceBucket(bucket)
+                            .sourceKey(sourcePath)
+                            .destinationBucket(bucket)
+                            .destinationKey(destinationPath)
+                            .copySourceIfMatch(source.eTag())
+                            .metadataDirective(MetadataDirective.COPY)
+                            .acl(accessPolicy == null ? null : accessPolicy.toString())
+                            .overrideConfiguration(
+                                    copyRequestConfiguration(CopyUtils.remaining(deadline)))
+                            .build();
+            final var result = awaitCopy(s3AsyncClient.copyObject(request), deadline);
+            if (result.copyObjectResult() == null || result.copyObjectResult().eTag() == null) {
+                throw CopyUtils.failure(
+                        "S3 did not confirm copy completion", new IllegalStateException());
+            }
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw CopyUtils.failure("S3 copy interrupted; inspect destination before retrying", e);
+        } catch (final ExecutionException | TimeoutException | RuntimeException e) {
+            throw CopyUtils.failure(
+                    "S3 copy failed; destination outcome may be unknown. Inspect before retrying",
+                    e);
+        }
+    }
+
+    private static AwsRequestOverrideConfiguration copyRequestConfiguration(
+            final Duration timeout) {
+        return AwsRequestOverrideConfiguration.builder().apiCallTimeout(timeout).build();
+    }
+
+    private static <T> T awaitCopy(final CompletableFuture<T> future, final long deadline)
+            throws InterruptedException,
+                    ExecutionException,
+                    TimeoutException,
+                    StorageClientException {
+        try {
+            return future.get(CopyUtils.remaining(deadline).toNanos(), TimeUnit.NANOSECONDS);
+        } finally {
+            if (!future.isDone()) {
+                future.cancel(true);
+            }
+        }
     }
 
     @Override

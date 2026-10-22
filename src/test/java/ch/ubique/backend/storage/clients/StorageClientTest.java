@@ -47,7 +47,7 @@ import java.util.stream.Stream;
 @SuppressWarnings("resource")
 class StorageClientTest {
 
-    private static final GenericContainer<?> AZURE_BLOB_STORAGE_CONTAINER =
+    static final GenericContainer<?> AZURE_BLOB_STORAGE_CONTAINER =
             new GenericContainer<>("mcr.microsoft.com/azure-storage/azurite")
                     .withImagePullPolicy(PullPolicy.ageBased(Duration.ofDays(30)))
                     .withExposedPorts(10000)
@@ -63,7 +63,7 @@ class StorageClientTest {
                             "0.0.0.0",
                             "--skipApiVersionCheck");
 
-    private static final GenericContainer<?> MINIO_CONTAINER =
+    static final GenericContainer<?> MINIO_CONTAINER =
             new GenericContainer<>("cgr.dev/chainguard/minio:latest")
                     .withImagePullPolicy(PullPolicy.ageBased(Duration.ofDays(30)))
                     .withEnv("MINIO_ROOT_USER", "test")
