@@ -2,11 +2,13 @@ package ch.ubique.backend.storage.clients;
 
 import ch.ubique.backend.core.io.FileProvider;
 import ch.ubique.backend.core.utils.StringUtils;
+import ch.ubique.backend.storage.CopyOptions;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
+import ch.ubique.backend.storage.utils.CopyUtils;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
@@ -49,6 +51,14 @@ public class PrefixStorageClient implements StorageClient {
     @Override
     public StorageClient withoutRetry() {
         return new PrefixStorageClient(pathPrefix, storageClient.withoutRetry());
+    }
+
+    @Override
+    public void copy(
+            final String sourcePath, final String destinationPath, final CopyOptions options)
+            throws StorageClientException {
+        CopyUtils.checkPaths(sourcePath, destinationPath);
+        storageClient.copy(prefixedPath(sourcePath), prefixedPath(destinationPath), options);
     }
 
     @Override

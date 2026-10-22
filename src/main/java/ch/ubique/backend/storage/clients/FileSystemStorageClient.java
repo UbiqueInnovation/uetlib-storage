@@ -1,12 +1,14 @@
 package ch.ubique.backend.storage.clients;
 
 import ch.ubique.backend.core.io.FileProvider;
+import ch.ubique.backend.storage.CopyOptions;
 import ch.ubique.backend.storage.OutputMetaData;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
+import ch.ubique.backend.storage.utils.CopyUtils;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
@@ -28,6 +30,7 @@ import java.io.InputStream;
 import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.text.MessageFormat;
 import java.time.OffsetDateTime;
 import java.util.Collection;
@@ -75,6 +78,35 @@ public class FileSystemStorageClient implements StorageClient {
             return bytesRead == 2 && header[0] == (byte) 0x1F && header[1] == (byte) 0x8B;
         } catch (final IOException e) {
             return false;
+        }
+    }
+
+    @Override
+    public void copy(
+            final String sourcePath, final String destinationPath, final CopyOptions options)
+            throws StorageClientException {
+        CopyUtils.checkPaths(sourcePath, destinationPath);
+        final long deadline = System.nanoTime() + options.timeout().toNanos();
+        final var source = getCompletePath(sourcePath).toAbsolutePath().normalize();
+        final var destination = getCompletePath(destinationPath).toAbsolutePath().normalize();
+        try {
+            if (source.equals(destination)
+                    || (Files.exists(destination) && Files.isSameFile(source, destination))) {
+                throw new IOException("Copy source and destination refer to the same file");
+            }
+            if (!Files.isRegularFile(source)) {
+                throw new FileNotFoundException("Copy source is not a regular file: " + sourcePath);
+            }
+            CopyUtils.remaining(deadline);
+            Files.createDirectories(Objects.requireNonNull(destination.getParent()));
+            Files.copy(
+                    source,
+                    destination,
+                    StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.COPY_ATTRIBUTES);
+            CopyUtils.remaining(deadline);
+        } catch (final IOException | RuntimeException e) {
+            throw CopyUtils.failure("Filesystem copy failed", e);
         }
     }
 
