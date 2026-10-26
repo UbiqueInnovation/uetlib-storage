@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import ch.ubique.backend.core.utils.InputStreamUtils;
 import ch.ubique.backend.storage.StorageClient;
 import ch.ubique.backend.storage.exception.NonRetryableStorageClientException;
+import ch.ubique.backend.storage.exception.StorageClientException;
 import ch.ubique.backend.storage.output.ByteOutput;
 
 import org.junit.jupiter.api.AfterAll;
@@ -121,16 +122,41 @@ class StorageClientTest {
         return Stream.of(new FileSystemStorageClient(tempDir.toString(), false));
     }
 
+    private static final String AZURITE_ACCOUNT_KEY =
+            "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
+
+    private static String azureConnectionString(
+            final String host, final int port, final String accountKey) {
+        return String.format(
+                "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;"
+                        + "AccountKey=%s;BlobEndpoint=http://%s:%s/devstoreaccount1;",
+                accountKey, host, port);
+    }
+
+    private static AmazonS3StorageClient createAwsStorageClient(
+            final String endpoint, final String accessKey, final String secretKey) {
+        return new AmazonS3StorageClient(
+                "test",
+                null,
+                S3AsyncClient.builder()
+                        .credentialsProvider(
+                                StaticCredentialsProvider.create(
+                                        AwsBasicCredentials.create(accessKey, secretKey)))
+                        .region(Region.EU_CENTRAL_1)
+                        .multipartEnabled(true)
+                        .endpointOverride(URI.create(endpoint))
+                        .forcePathStyle(true)
+                        .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
+                        .build());
+    }
+
     static Stream<StorageClient> createAzureBlobStorageClient() {
         final var mappedPort = AZURE_BLOB_STORAGE_CONTAINER.getFirstMappedPort();
         Testcontainers.exposeHostPorts(mappedPort);
 
         final var connectionString =
-                String.format(
-                        "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;"
-                                + "AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;"
-                                + "BlobEndpoint=http://%s:%s/devstoreaccount1;",
-                        AZURE_BLOB_STORAGE_CONTAINER.getHost(), mappedPort);
+                azureConnectionString(
+                        AZURE_BLOB_STORAGE_CONTAINER.getHost(), mappedPort, AZURITE_ACCOUNT_KEY);
 
         final var storageClient = new AzureBlobStorageClient("test", connectionString);
         storageClient.createContainer("test");
@@ -149,21 +175,7 @@ class StorageClientTest {
                 new MinioStorageClient(bucket, endpoint, accessKey, secretKey, null, null);
         minioStorageClient.createBucket(bucket);
 
-        final var awsStorageClient =
-                new AmazonS3StorageClient(
-                        bucket,
-                        null,
-                        S3AsyncClient.builder()
-                                .credentialsProvider(
-                                        StaticCredentialsProvider.create(
-                                                AwsBasicCredentials.create(accessKey, secretKey)))
-                                .region(Region.EU_CENTRAL_1)
-                                .multipartEnabled(true)
-                                .endpointOverride(URI.create(endpoint))
-                                .forcePathStyle(true)
-                                .requestChecksumCalculation(
-                                        RequestChecksumCalculation.WHEN_REQUIRED)
-                                .build());
+        final var awsStorageClient = createAwsStorageClient(endpoint, accessKey, secretKey);
         return Stream.of(minioStorageClient, awsStorageClient);
     }
 
@@ -357,22 +369,71 @@ class StorageClientTest {
             }
         }
 
-        // Folder marker objects (zero-byte objects with a key ending in "/") can be deleted
-        if (isMinio(storageClient)) {
-            storageClient.write(new ByteOutput(new byte[0]), "marker/");
-            assertTrue(storageClient.exists("marker/"));
-            assertTrue(storageClient.delete("marker/"));
-            assertFalse(storageClient.exists("marker/"));
+        // Paths ending in "/" denote directories and cannot be written to
+        assertThrows(
+                NonRetryableStorageClientException.class,
+                () -> storageClient.write(new ByteOutput(new byte[0]), "marker/"));
+        assertThrows(
+                NonRetryableStorageClientException.class,
+                () -> storageClient.write(new ByteOutput(new byte[0]), ""));
+        assertFalse(storageClient.exists("marker/"));
 
-            storageClient.write(new ByteOutput(new byte[0]), "marker/");
-            storageClient.write(new ByteOutput(new byte[0]), "marker/child");
-            assertThrows(IOException.class, () -> storageClient.delete("marker/"));
-            assertTrue(storageClient.delete("marker/", true));
-            assertFalse(storageClient.exists("marker/"));
-        }
+        // Reading a missing object fails and is not retried
+        assertThrows(
+                NonRetryableStorageClientException.class,
+                () -> storageClient.read("does/not/exist").close());
 
         // Cleanup for the next run
         assertDoesNotThrow(() -> storageClient.delete("", true));
+    }
+
+    /** Clients that cannot reach their storage, or are not allowed to access it. */
+    static Collection<StorageClient> createFailingStorageClients() {
+        final var minioEndpoint =
+                String.format(
+                        "http://%s:%s",
+                        MINIO_CONTAINER.getHost(), MINIO_CONTAINER.getFirstMappedPort());
+        final var unreachableEndpoint = "http://localhost:1";
+        final var timeout = Duration.ofSeconds(2);
+
+        final var clients =
+                Stream.of(
+                        // Unreachable
+                        new MinioStorageClient(
+                                "test", unreachableEndpoint, "test", "test1234", timeout, null),
+                        createAwsStorageClient(unreachableEndpoint, "test", "test1234"),
+                        // No unreachable Azure client: the Azure SDK retries with exponential
+                        // backoff for minutes, which is not configurable via
+                        // AzureBlobStorageClient
+                        // Invalid credentials
+                        new MinioStorageClient(
+                                "test", minioEndpoint, "wrong", "wrong-secret", timeout, null),
+                        createAwsStorageClient(minioEndpoint, "wrong", "wrong-secret"),
+                        new AzureBlobStorageClient(
+                                "test",
+                                azureConnectionString(
+                                        AZURE_BLOB_STORAGE_CONTAINER.getHost(),
+                                        AZURE_BLOB_STORAGE_CONTAINER.getFirstMappedPort(),
+                                        "d3Jvbmc="),
+                                timeout,
+                                null));
+        return clients.flatMap(StorageClientTest::thisPlusRetryClient).toList();
+    }
+
+    @ParameterizedTest
+    @MethodSource("createFailingStorageClients")
+    void failingStorageThrowsStorageClientException(final StorageClient storageClient) {
+        assertThrows(StorageClientException.class, () -> storageClient.exists("foo"));
+        assertThrows(StorageClientException.class, () -> storageClient.exists("foo/"));
+        assertThrows(StorageClientException.class, () -> storageClient.delete("foo"));
+        assertThrows(StorageClientException.class, () -> storageClient.delete("foo/"));
+        assertThrows(StorageClientException.class, () -> storageClient.delete("foo", true));
+        assertThrows(StorageClientException.class, () -> storageClient.list("", false));
+        assertThrows(StorageClientException.class, () -> storageClient.list("", true));
+        assertThrows(
+                StorageClientException.class,
+                () -> storageClient.write(new ByteOutput(new byte[] {1}), "foo"));
+        assertThrows(StorageClientException.class, () -> storageClient.read("foo").close());
     }
 
     private static boolean isFS(final StorageClient storageClient) {
@@ -385,12 +446,6 @@ class StorageClientTest {
         return storageClient instanceof AzureBlobStorageClient
                 || storageClient instanceof final RetryStorageClient r && isAzure(r.delegate())
                 || storageClient instanceof final PrefixStorageClient p && isAzure(p.delegate());
-    }
-
-    private static boolean isMinio(final StorageClient storageClient) {
-        return storageClient instanceof MinioStorageClient
-                || storageClient instanceof final RetryStorageClient r && isMinio(r.delegate())
-                || storageClient instanceof final PrefixStorageClient p && isMinio(p.delegate());
     }
 
     private static boolean isPrefix(final StorageClient storageClient) {

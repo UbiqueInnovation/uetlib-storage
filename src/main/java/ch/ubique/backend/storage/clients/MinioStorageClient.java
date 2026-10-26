@@ -17,6 +17,7 @@ import ch.ubique.backend.storage.output.FileOutput;
 import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
+import ch.ubique.backend.storage.utils.PathUtils;
 
 import io.minio.*;
 import io.minio.Http.Method;
@@ -173,6 +174,7 @@ public class MinioStorageClient implements StorageClient {
     public final void write(
             final Output output, final String path, @Nullable final OutputMetaData outputMetaData)
             throws StorageClientException {
+        PathUtils.checkWritablePath(path);
 
         if (output instanceof final FileOutput file) {
             writeFile(file, path, outputMetaData);
@@ -339,7 +341,7 @@ public class MinioStorageClient implements StorageClient {
                             "cannot delete non-empty directory. [path={0}, recursive=false]", path),
                     new DirectoryNotEmptyException(path));
         }
-        if (existing.contains(path)) {
+        if (existing.contains(path)) { // paths ending with "/" can be marker objects in S3
             removeObject(path);
             return true;
         }

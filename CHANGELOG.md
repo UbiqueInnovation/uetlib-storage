@@ -13,6 +13,8 @@
 
 - `MinioStorageClient` now throws `RetryableStorageClientException` instead of `IllegalStateException` for IO
   errors (e.g. connection refused, timeouts).
+- `AzureBlobStorageClient` now throws `StorageClientException` instead of the SDK's unchecked exceptions (e.g.
+  `BlobStorageException`) from `write`, `delete`, `list` and `exists`.
 
 ### Behavior changes
 
@@ -23,6 +25,9 @@
     - Non-recursive `delete` and `exists` need read permission (`s3:GetObject`) (`HeadObject`). Delete/write-only
       credentials fail. On AWS S3, credentials without `s3:ListBucket` get `403` instead of `404` for missing keys,
       which is reported as an error.
+- `write` and the `copy` destination reject empty paths and paths ending in `/` with a
+  `NonRetryableStorageClientException`, for all implementations. Previously S3 and Azure stored a "folder marker"
+  object, while the file system client silently wrote to the path without the trailing `/`.
 
 ## 2.4.0
 
