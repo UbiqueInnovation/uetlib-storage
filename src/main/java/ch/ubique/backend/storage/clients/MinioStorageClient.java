@@ -133,6 +133,12 @@ public class MinioStorageClient implements StorageClient {
     public static StorageClientException storageClientException(
             final String message, final Throwable cause) {
 
+        // minio wraps I/O errors (e.g. connection refused, timeouts) in an IllegalStateException
+        if (cause instanceof IllegalStateException
+                && cause.getCause() instanceof final IOException ioException) {
+            return new RetryableStorageClientException(message, ioException);
+        }
+
         if (!(cause instanceof final MinioException minioException)) {
             return StorageClientException.of(message, cause);
         }
@@ -189,7 +195,7 @@ public class MinioStorageClient implements StorageClient {
                             .userMetadata(createUserMetadata(metaData))
                             .build();
             minioClient.putObject(putObjectArgs);
-        } catch (final IOException | MinioException e) {
+        } catch (final IOException | MinioException | IllegalStateException e) {
             throw storageClientException(
                     MessageFormat.format(
                             "failed to write for [path={0}, outputMetaData={1}, output={2}]",
@@ -219,7 +225,7 @@ public class MinioStorageClient implements StorageClient {
                             .build();
 
             minioClient.uploadObject(uploadObjectArgs);
-        } catch (final MinioException e) {
+        } catch (final MinioException | IllegalStateException e) {
             throw storageClientException(
                     MessageFormat.format(
                             "failed to write for [path={0}, outputMetaData={1}, output={2}]",
@@ -300,7 +306,7 @@ public class MinioStorageClient implements StorageClient {
             }
 
             return objectResponse;
-        } catch (final IOException | MinioException e) {
+        } catch (final IOException | MinioException | IllegalStateException e) {
             throw storageClientException(
                     MessageFormat.format(
                             "failed to read for [path={0}, doUncompressIfNeeded={1}]",
@@ -344,7 +350,7 @@ public class MinioStorageClient implements StorageClient {
         try {
             minioClient.removeObject(
                     RemoveObjectArgs.builder().bucket(bucket).object(path).build());
-        } catch (final MinioException e) {
+        } catch (final MinioException | IllegalStateException e) {
             throw storageClientException(
                     MessageFormat.format("failed to delete for [path={0}, recursive=false]", path),
                     e);
@@ -369,7 +375,7 @@ public class MinioStorageClient implements StorageClient {
             for (final var result : results) {
                 result.get();
             }
-        } catch (final MinioException e) {
+        } catch (final MinioException | IllegalStateException e) {
             throw storageClientException(
                     MessageFormat.format("failed to delete for [path={0}, recursive=true]", path),
                     e);
@@ -394,7 +400,7 @@ public class MinioStorageClient implements StorageClient {
             }
             throw storageClientException(
                     MessageFormat.format("failed to stat for [path={0}]", path), e);
-        } catch (final MinioException e) {
+        } catch (final MinioException | IllegalStateException e) {
             throw storageClientException(
                     MessageFormat.format("failed to stat for [path={0}]", path), e);
         }
@@ -416,7 +422,7 @@ public class MinioStorageClient implements StorageClient {
             for (final var object : objects) {
                 paths.add(object.get().objectName());
             }
-        } catch (final MinioException e) {
+        } catch (final MinioException | IllegalStateException e) {
             throw storageClientException(
                     MessageFormat.format(
                             "failed to list for [mappingPath={0}, recursive={1}]", path, recursive),
@@ -460,7 +466,7 @@ public class MinioStorageClient implements StorageClient {
                             .bucket(bucket)
                             .object(path)
                             .build());
-        } catch (final MinioException e) {
+        } catch (final MinioException | IllegalStateException e) {
             throw storageClientException(
                     MessageFormat.format(
                             "failed to get signed url for [mappingPath={0}, expiry={1}]",
@@ -479,7 +485,7 @@ public class MinioStorageClient implements StorageClient {
     public void createBucket(final String bucketName) throws StorageClientException {
         try {
             minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
-        } catch (final MinioException e) {
+        } catch (final MinioException | IllegalStateException e) {
             throw storageClientException(
                     MessageFormat.format(
                             "failed to create bucket for [bucketName={0}]", bucketName),
