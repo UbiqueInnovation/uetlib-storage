@@ -9,10 +9,15 @@
       (free on R2), and falls back to `list` calls.
     - `exists(path)` checks exact key (`HeadObject`) and falls back to `list` calls.
 
+### Fixes
+
+- `MinioStorageClient` now throws `RetryableStorageClientException` instead of `IllegalStateException` for IO
+  errors (e.g. connection refused, timeouts).
+
 ### Behavior changes
 
-- `MinioStorageClient.delete` now returns `false` if nothing was deleted. `AmazonS3StorageClient` still always
-  returns `true`.
+- `StorageClient.delete` returns `true` if something was deleted and `false` if the path did not exist.
+  `MinioStorageClient` and `AmazonS3StorageClient` had always returned `true`.
 - Non-recursive delete of an existing key now succeeds even if other keys share it as prefix (e.g. `foo` next to
   `foo.bak`); previously it threw "cannot delete non-empty directory".
     - Non-recursive `delete` and `exists` need read permission (`s3:GetObject`) (`HeadObject`). Delete/write-only

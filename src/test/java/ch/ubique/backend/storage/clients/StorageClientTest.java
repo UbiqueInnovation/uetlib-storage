@@ -228,11 +228,10 @@ class StorageClientTest {
 
         assertTrue(storageClient.exists("bar"));
         assertFalse(storageClient.exists("bar/nonExisting"));
-        // AmazonS3StorageClient always returns true from delete
-        final var reportsDeleted = !isAmazonS3(storageClient);
-        assertNotEquals(reportsDeleted, storageClient.delete("bar/nonExisting"));
-        assertNotEquals(reportsDeleted, storageClient.delete("nonExisting/bar"));
-        assertNotEquals(reportsDeleted, storageClient.delete("nonExisting/"));
+
+        assertFalse(storageClient.delete("bar/nonExisting"));
+        assertFalse(storageClient.delete("nonExisting/bar"));
+        assertFalse(storageClient.delete("nonExisting/"));
         assertTrue(storageClient.delete("bar/foo1"));
         assertFalse(storageClient.exists("bar/foo1"));
         assertThatCollection(storageClient.list(true))
@@ -245,7 +244,8 @@ class StorageClientTest {
         assertThatCollection(storageClient.list())
                 .containsExactlyInAnyOrderElementsOf(Set.of("foo", "bar/"));
 
-        assertDoesNotThrow(() -> storageClient.delete("bar", true));
+        assertFalse(storageClient.delete("nonExisting/", true));
+        assertTrue(storageClient.delete("bar", true));
         assertTrue(storageClient.exists("foo"));
         assertFalse(storageClient.exists("bar/"));
         assertFalse(storageClient.exists("bar/foo1"));
@@ -254,7 +254,7 @@ class StorageClientTest {
                 .containsExactlyInAnyOrderElementsOf(Set.of("foo"));
 
         assertTrue(storageClient.delete("foo"));
-        assertNotEquals(reportsDeleted, storageClient.delete("foo"));
+        assertFalse(storageClient.delete("foo"));
         assertFalse(storageClient.exists("foo"));
         assertTrue(storageClient.list().isEmpty());
 
@@ -391,12 +391,6 @@ class StorageClientTest {
         return storageClient instanceof MinioStorageClient
                 || storageClient instanceof final RetryStorageClient r && isMinio(r.delegate())
                 || storageClient instanceof final PrefixStorageClient p && isMinio(p.delegate());
-    }
-
-    private static boolean isAmazonS3(final StorageClient storageClient) {
-        return storageClient instanceof AmazonS3StorageClient
-                || storageClient instanceof final RetryStorageClient r && isAmazonS3(r.delegate())
-                || storageClient instanceof final PrefixStorageClient p && isAmazonS3(p.delegate());
     }
 
     private static boolean isPrefix(final StorageClient storageClient) {
