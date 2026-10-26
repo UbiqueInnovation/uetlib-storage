@@ -11,6 +11,7 @@ public final class CopyUtils {
 
     public static void checkPaths(final String source, final String destination)
             throws NonRetryableStorageClientException {
+        PathUtils.checkWritablePath(destination);
         if (source.equals(destination)) {
             throw failure(
                     "Copy source and destination must differ",

@@ -10,6 +10,7 @@ import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
 import ch.ubique.backend.storage.utils.CopyUtils;
+import ch.ubique.backend.storage.utils.PathUtils;
 
 import com.azure.core.http.HttpClient;
 import com.azure.core.http.RequestConditions;
@@ -208,6 +209,7 @@ public class AzureBlobStorageClient implements StorageClient {
     public void write(
             final Output output, final String path, @Nullable final OutputMetaData outputMetaData)
             throws StorageClientException {
+        PathUtils.checkWritablePath(path);
         final var metaData =
                 OutputMetaData.resolveOutputMetaData(
                         outputMetaData, outputMetaDataProvider, output);
@@ -226,7 +228,7 @@ public class AzureBlobStorageClient implements StorageClient {
             blobContainerClient
                     .getBlobClient(path)
                     .uploadWithResponse(uploadOptions, null, Context.NONE);
-        } catch (final IOException e) {
+        } catch (final IOException | RuntimeException e) {
             throw StorageClientException.of(
                     MessageFormat.format("failed to write [path={0}]", path), e);
         }
@@ -278,7 +280,7 @@ public class AzureBlobStorageClient implements StorageClient {
 
     private boolean deleteNonRecursive(final String path) throws StorageClientException {
         if (blobExists(path)) {
-            return blobContainerClient.getBlobClient(path).deleteIfExists();
+            return deleteIfExists(path);
         }
 
         // If we arrive here, a single blob matching the path exactly does not exist:
@@ -299,7 +301,7 @@ public class AzureBlobStorageClient implements StorageClient {
         final var existing = list(path, true);
         var deletedAny = false;
         for (final var pathToDelete : existing) {
-            final var deleted = blobContainerClient.getBlobClient(pathToDelete).deleteIfExists();
+            final var deleted = deleteIfExists(pathToDelete);
             deletedAny = deletedAny || deleted;
         }
         return deletedAny;
@@ -309,14 +311,23 @@ public class AzureBlobStorageClient implements StorageClient {
     public Collection<String> list(final String path, final boolean recursive)
             throws StorageClientException {
 
-        final PagedIterable<BlobItem> blobItems;
-        if (recursive) {
-            final var options = new ListBlobsOptions().setPrefix(path);
-            blobItems = blobContainerClient.listBlobs(options, timeout);
-        } else {
-            blobItems = blobContainerClient.listBlobsByHierarchy(path);
+        try {
+            final PagedIterable<BlobItem> blobItems;
+            if (recursive) {
+                final var options = new ListBlobsOptions().setPrefix(path);
+                blobItems = blobContainerClient.listBlobs(options, timeout);
+            } else {
+                blobItems = blobContainerClient.listBlobsByHierarchy(path);
+            }
+            return blobItems.stream()
+                    .map(BlobItem::getName)
+                    .collect(Collectors.toUnmodifiableSet());
+        } catch (final RuntimeException e) {
+            throw StorageClientException.of(
+                    MessageFormat.format(
+                            "failed to list for [path={0}, recursive={1}]", path, recursive),
+                    e);
         }
-        return blobItems.stream().map(BlobItem::getName).collect(Collectors.toUnmodifiableSet());
     }
 
     @Override
@@ -324,8 +335,22 @@ public class AzureBlobStorageClient implements StorageClient {
         return blobExists(path) || !list(path, false).isEmpty();
     }
 
-    private boolean blobExists(final String path) {
-        return blobContainerClient.getBlobClient(path).exists();
+    private boolean blobExists(final String path) throws StorageClientException {
+        try {
+            return blobContainerClient.getBlobClient(path).exists();
+        } catch (final RuntimeException e) {
+            throw StorageClientException.of(
+                    MessageFormat.format("failed to check existence for [path={0}]", path), e);
+        }
+    }
+
+    private boolean deleteIfExists(final String path) throws StorageClientException {
+        try {
+            return blobContainerClient.getBlobClient(path).deleteIfExists();
+        } catch (final RuntimeException e) {
+            throw StorageClientException.of(
+                    MessageFormat.format("failed to delete for [path={0}]", path), e);
+        }
     }
 
     @Override

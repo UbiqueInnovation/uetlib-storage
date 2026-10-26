@@ -9,6 +9,7 @@ import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
 import ch.ubique.backend.storage.utils.CopyUtils;
+import ch.ubique.backend.storage.utils.PathUtils;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
@@ -114,6 +115,7 @@ public class FileSystemStorageClient implements StorageClient {
     public void write(
             final Output output, final String path, @Nullable final OutputMetaData outputMetaData)
             throws StorageClientException {
+        PathUtils.checkWritablePath(path);
         final var completePath = getCompletePath(path);
         final var file = new File(completePath.toUri());
         final var parent = file.getParentFile();

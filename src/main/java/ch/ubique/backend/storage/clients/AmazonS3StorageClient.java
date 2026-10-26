@@ -18,6 +18,7 @@ import ch.ubique.backend.storage.output.Output;
 import ch.ubique.backend.storage.output.OutputWithPath;
 import ch.ubique.backend.storage.utils.CompressionUtils;
 import ch.ubique.backend.storage.utils.CopyUtils;
+import ch.ubique.backend.storage.utils.PathUtils;
 
 import jakarta.validation.Valid;
 
@@ -274,6 +275,7 @@ public class AmazonS3StorageClient implements StorageClient {
     public final void write(
             final Output output, final String path, @Nullable final OutputMetaData outputMetaData)
             throws StorageClientException {
+        PathUtils.checkWritablePath(path);
         try {
             final var metaData =
                     OutputMetaData.resolveOutputMetaData(
