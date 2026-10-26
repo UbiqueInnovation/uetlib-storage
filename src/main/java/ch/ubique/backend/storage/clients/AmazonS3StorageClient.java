@@ -22,6 +22,7 @@ import ch.ubique.backend.storage.utils.CopyUtils;
 import jakarta.validation.Valid;
 
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jspecify.annotations.Nullable;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -51,6 +52,7 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 public class AmazonS3StorageClient implements StorageClient {
 
@@ -411,9 +413,9 @@ public class AmazonS3StorageClient implements StorageClient {
         final var objectsToDelete =
                 existing.stream().map(key -> ObjectIdentifier.builder().key(key).build()).toList();
 
-        final var errors =
+        final var errorsAndDeleted =
                 StreamUtils.chunked(objectsToDelete, 1000)
-                        .flatMap(
+                        .map(
                                 chunk ->
                                         s3AsyncClient
                                                 .deleteObjects(
@@ -424,17 +426,24 @@ public class AmazonS3StorageClient implements StorageClient {
                                                                                         deleteBuilder
                                                                                                 .objects(
                                                                                                         chunk)))
-                                                .join()
-                                                .errors()
-                                                .stream())
-                        .toList();
+                                                .join())
+                        .collect(
+                                Collectors.teeing(
+                                        Collectors.flatMapping(
+                                                d -> d.errors().stream(), Collectors.toList()),
+                                        Collectors.mapping(
+                                                d -> d.deleted().size(),
+                                                Collectors.summingInt(i -> i)),
+                                        Pair::of));
 
-        if (errors.isEmpty()) {
-            return true;
+        if (errorsAndDeleted.getLeft().isEmpty()) {
+            return errorsAndDeleted.getRight() != 0;
         }
 
         throw toStorageClientException(
-                "Failed to delete object(s) from S3", new S3StorageClientException(errors));
+                "Failed to delete object(s) from S3, deleted %d objects, %d errors"
+                        .formatted(errorsAndDeleted.getRight(), errorsAndDeleted.getLeft().size()),
+                new S3StorageClientException(errorsAndDeleted.getLeft()));
     }
 
     @Override

@@ -52,6 +52,9 @@ public interface StorageClient {
 
     InputStream read(String path, boolean doUncompressIfNeeded) throws StorageClientException;
 
+    /**
+     * @return {@code true} if the path was deleted, {@code false} if it did not exist.
+     */
     boolean delete(String path, boolean recursive) throws StorageClientException;
 
     Collection<String> list(String path, boolean recursive) throws StorageClientException;
