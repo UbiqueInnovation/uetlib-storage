@@ -1,0 +1,95 @@
+package ch.ubique.uetlib.storage.invocation;
+
+import static ch.ubique.uetlib.storage.invocation.InvocationHandlerUtil.*;
+import static ch.ubique.uetlib.storage.logger.LogAtNullableLevel.atLevel;
+import static ch.ubique.uetlib.storage.parameter.StorageObjectParameterResolver.getStorageObjectParameterIndex;
+
+import ch.ubique.uetlib.core.utils.ArrayUtils;
+import ch.ubique.uetlib.storage.OutputMetaData;
+import ch.ubique.uetlib.storage.annotations.OutputMapping;
+import ch.ubique.uetlib.storage.output.*;
+import java.io.File;
+import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Objects;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import tools.jackson.databind.ObjectMapper;
+
+public class OutputMappingInvocationHandler implements StorageMappingInvocationHandler {
+
+    private final Logger logger;
+
+    public OutputMappingInvocationHandler(final Logger logger) {
+        this.logger = logger;
+    }
+
+    private static @Nullable OutputMetaData getOutputMetaData(final Object[] allArguments) {
+        return Arrays.stream(allArguments)
+                .filter(OutputMetaData.class::isInstance)
+                .map(OutputMetaData.class::cast)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private Output getOutput(
+            final ObjectMapper objectMapper,
+            final OutputMapping outputMapping,
+            final Method method,
+            final Object[] args) {
+        final var storageObjectParameterIndex = getStorageObjectParameterIndex(method);
+        final var storageObject = args[storageObjectParameterIndex];
+        final var contentType = outputMapping.contentType();
+
+        final var output =
+                switch (storageObject) {
+                    case final Output o -> o; // no wrapping if already of type Output
+                    case final File file -> new FileOutput(file, contentType);
+                    case final InputStream is -> new InputStreamOutput(is, contentType);
+                    case final byte[] bytes -> new ByteOutput(bytes, contentType);
+                    case null -> new ByteOutput(new byte[0], contentType);
+                    default -> new JsonOutput<>(storageObject, objectMapper);
+                };
+
+        if (outputMapping.gZip()) {
+            return output.gZip();
+        }
+        return output;
+    }
+
+    @Override
+    public Object invoke(
+            final StorageMappingInvocationProperties storageMappingInvocationProperties,
+            final Method method,
+            final Object @Nullable [] args)
+            throws Throwable {
+        final var storageClient = storageMappingInvocationProperties.storageClient();
+        final var objectMapper = storageMappingInvocationProperties.objectMapper();
+
+        final var outputMapping = findAnnotation(method, OutputMapping.class);
+        final var level = ArrayUtils.singletonOrNull(outputMapping.logLevel());
+
+        final var output =
+                getOutput(objectMapper, outputMapping, method, Objects.requireNonNull(args));
+
+        final var basePath = storageMappingInvocationProperties.basePath();
+        final var path =
+                getPath(
+                        method.getParameters(),
+                        args,
+                        getPathTemplate(basePath, outputMapping.path()));
+        final var outputMetaData = getOutputMetaData(args);
+
+        atLevel(logger, level)
+                .log(
+                        "writing content of type {} to path {} with size {} and metadata {}",
+                        outputMapping.contentType(),
+                        path,
+                        output.contentLength(),
+                        outputMetaData);
+        storageClient.write(output, path, outputMetaData);
+
+        return new Object();
+    }
+}
