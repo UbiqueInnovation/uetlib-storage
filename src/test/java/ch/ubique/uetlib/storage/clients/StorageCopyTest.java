@@ -1,6 +1,7 @@
 package ch.ubique.uetlib.storage.clients;
 
 import static ch.ubique.uetlib.storage.clients.StorageClientTest.*;
+
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -8,24 +9,28 @@ import ch.ubique.uetlib.storage.StorageClient;
 import ch.ubique.uetlib.storage.exception.NonRetryableStorageClientException;
 import ch.ubique.uetlib.storage.output.ByteOutput;
 import ch.ubique.uetlib.storage.utils.CompressionUtils;
+
 import com.azure.core.util.BinaryData;
 import com.azure.core.util.Context;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobHttpHeaders;
 import com.azure.storage.blob.options.BlobParallelUploadOptions;
-import java.net.URI;
-import java.util.Map;
-import java.util.UUID;
+
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+
 import software.amazon.awssdk.auth.credentials.*;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+
+import java.net.URI;
+import java.util.Map;
+import java.util.UUID;
 
 class StorageCopyTest {
     private static final byte[] BINARY = new byte[] {0, 1, -1, -128, 42, 0};

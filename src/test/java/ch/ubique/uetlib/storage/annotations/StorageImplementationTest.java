@@ -1,11 +1,13 @@
 package ch.ubique.uetlib.storage.annotations;
 
 import static ch.ubique.uetlib.test.assertion.AssertionUtils.assertThrowsWithMessage;
-import static java.util.Objects.requireNonNull;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+
+import static java.util.Objects.requireNonNull;
 
 import ch.ubique.uetlib.storage.OutputMetaData;
 import ch.ubique.uetlib.storage.StorageClient;
@@ -14,18 +16,21 @@ import ch.ubique.uetlib.storage.clients.FileSystemStorageClient;
 import ch.ubique.uetlib.storage.output.ByteOutput;
 import ch.ubique.uetlib.storage.output.GZipOutput;
 import ch.ubique.uetlib.storage.output.JsonOutput;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.*;
+
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.*;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.SerializationFeature;
-import tools.jackson.databind.json.JsonMapper;
 
 @SuppressWarnings("unused")
 class StorageImplementationTest {

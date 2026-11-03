@@ -1,6 +1,7 @@
 package ch.ubique.uetlib.storage.utils;
 
 import ch.ubique.uetlib.storage.exception.NonRetryableStorageClientException;
+
 import java.text.MessageFormat;
 
 /** Shared validation of object paths. */

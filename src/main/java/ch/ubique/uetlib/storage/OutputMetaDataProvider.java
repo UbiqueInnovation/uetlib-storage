@@ -4,9 +4,11 @@ import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 
 import io.minio.messages.RestoreRequest.CannedAcl;
+
+import org.jspecify.annotations.Nullable;
+
 import java.time.Duration;
 import java.time.Instant;
-import org.jspecify.annotations.Nullable;
 
 public final class OutputMetaDataProvider {
 

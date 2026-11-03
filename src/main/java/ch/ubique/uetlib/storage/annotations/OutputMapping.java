@@ -4,9 +4,11 @@ import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import ch.ubique.uetlib.storage.invocation.OutputMappingInvocationHandler;
+
+import org.slf4j.event.Level;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
-import org.slf4j.event.Level;
 
 /**
  * Implementations of methods annotated by this function are generated at runtime using byte-buddy.

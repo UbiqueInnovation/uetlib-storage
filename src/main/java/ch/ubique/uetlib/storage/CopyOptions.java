@@ -1,9 +1,11 @@
 package ch.ubique.uetlib.storage;
 
 import io.minio.messages.RestoreRequest.CannedAcl;
+
+import org.jspecify.annotations.Nullable;
+
 import java.time.Duration;
 import java.util.Objects;
-import org.jspecify.annotations.Nullable;
 
 /** Options for a native copy, independent of upload metadata and its defaults. */
 public record CopyOptions(@Nullable CannedAcl accessPolicy, Duration timeout) {

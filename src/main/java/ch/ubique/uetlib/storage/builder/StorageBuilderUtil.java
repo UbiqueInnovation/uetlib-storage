@@ -1,21 +1,25 @@
 package ch.ubique.uetlib.storage.builder;
 
 import static ch.ubique.uetlib.core.utils.AnnotationUtils.findAnnotation;
+
 import static java.util.stream.Collectors.toSet;
 
 import ch.ubique.uetlib.storage.OutputMetaData;
 import ch.ubique.uetlib.storage.StorageMappingType;
 import ch.ubique.uetlib.storage.annotations.*;
 import ch.ubique.uetlib.storage.invocation.*;
+
+import org.jetbrains.annotations.Contract;
+import org.slf4j.LoggerFactory;
+
+import tools.jackson.databind.ObjectMapper;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.jetbrains.annotations.Contract;
-import org.slf4j.LoggerFactory;
-import tools.jackson.databind.ObjectMapper;
 
 public final class StorageBuilderUtil {
 

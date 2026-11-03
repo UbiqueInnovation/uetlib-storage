@@ -5,10 +5,12 @@ import ch.ubique.uetlib.storage.OutputMetaData;
 import ch.ubique.uetlib.storage.StorageClient;
 import ch.ubique.uetlib.storage.output.ByteOutput;
 import ch.ubique.uetlib.storage.output.JsonOutput;
+
+import tools.jackson.databind.ObjectMapper;
+
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
-import tools.jackson.databind.ObjectMapper;
 
 public final class TestStorageReferenceImplementation implements TestStorage {
     private final StorageClient storageClient;

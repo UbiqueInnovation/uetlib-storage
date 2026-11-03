@@ -8,14 +8,17 @@ import ch.ubique.uetlib.core.utils.ArrayUtils;
 import ch.ubique.uetlib.storage.OutputMetaData;
 import ch.ubique.uetlib.storage.annotations.OutputMapping;
 import ch.ubique.uetlib.storage.output.*;
+
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+
+import tools.jackson.databind.ObjectMapper;
+
 import java.io.File;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Objects;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import tools.jackson.databind.ObjectMapper;
 
 public class OutputMappingInvocationHandler implements StorageMappingInvocationHandler {
 

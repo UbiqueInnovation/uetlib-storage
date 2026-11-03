@@ -1,13 +1,15 @@
 package ch.ubique.uetlib.storage.output;
 
 import ch.ubique.uetlib.core.io.GZIPCompressingInputStream;
-import java.io.*;
-import java.util.Optional;
-import java.util.zip.GZIPOutputStream;
+
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+
+import java.io.*;
+import java.util.Optional;
+import java.util.zip.GZIPOutputStream;
 
 public record GZipOutput(Output uncompressed) implements Output {
 

@@ -1,9 +1,10 @@
 package ch.ubique.uetlib.storage.exception;
 
+import software.amazon.awssdk.services.s3.model.S3Error;
+
 import java.util.Collection;
 import java.util.Set;
 import java.util.stream.Collectors;
-import software.amazon.awssdk.services.s3.model.S3Error;
 
 public class S3StorageClientException extends Exception {
 

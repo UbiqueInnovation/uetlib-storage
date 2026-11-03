@@ -1,8 +1,9 @@
 package ch.ubique.uetlib.storage.annotations;
 
+import org.slf4j.event.Level;
+
 import java.io.IOException;
 import java.util.Collection;
-import org.slf4j.event.Level;
 
 public interface TestListStorage {
 

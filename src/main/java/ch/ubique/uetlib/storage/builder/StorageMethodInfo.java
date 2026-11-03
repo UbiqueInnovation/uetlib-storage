@@ -2,7 +2,9 @@ package ch.ubique.uetlib.storage.builder;
 
 import ch.ubique.uetlib.storage.StorageMappingType;
 import ch.ubique.uetlib.storage.annotations.*;
+
 import jakarta.validation.constraints.NotBlank;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 

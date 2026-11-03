@@ -1,6 +1,7 @@
 package ch.ubique.uetlib.storage.logger;
 
 import jakarta.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
 import org.slf4j.spi.LoggingEventBuilder;

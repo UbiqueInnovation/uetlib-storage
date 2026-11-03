@@ -4,10 +4,13 @@ import static ch.ubique.uetlib.storage.builder.StorageBuilderUtil.getStorageMeth
 
 import ch.ubique.uetlib.storage.StorageClient;
 import ch.ubique.uetlib.storage.invocation.*;
+
+import org.jspecify.annotations.Nullable;
+
+import tools.jackson.databind.ObjectMapper;
+
 import java.lang.reflect.Proxy;
 import java.util.Objects;
-import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.ObjectMapper;
 
 public final class StorageBuilder<T> {
 

@@ -3,15 +3,19 @@ package ch.ubique.uetlib.storage.invocation;
 import ch.ubique.uetlib.core.utils.AnnotationUtils;
 import ch.ubique.uetlib.core.utils.StreamUtils;
 import ch.ubique.uetlib.storage.annotations.StoragePathVariable;
+
 import com.google.common.collect.MoreCollectors;
+
+import org.apache.commons.lang3.StringUtils;
+import org.jspecify.annotations.Nullable;
+
+import tools.jackson.databind.ObjectMapper;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Objects;
 import java.util.Optional;
-import org.apache.commons.lang3.StringUtils;
-import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.ObjectMapper;
 
 public final class InvocationHandlerUtil {
 

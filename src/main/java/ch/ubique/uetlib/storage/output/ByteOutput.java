@@ -4,15 +4,17 @@ import static java.util.Objects.requireNonNull;
 
 import ch.ubique.uetlib.core.file.ByteFile;
 import ch.ubique.uetlib.core.utils.StringUtils;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.jspecify.annotations.Nullable;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 public sealed class ByteOutput implements Output permits JsonOutput {
 

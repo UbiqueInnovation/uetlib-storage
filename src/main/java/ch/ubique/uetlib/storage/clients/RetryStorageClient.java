@@ -10,17 +10,21 @@ import ch.ubique.uetlib.storage.exception.StorageClientException;
 import ch.ubique.uetlib.storage.output.Output;
 import ch.ubique.uetlib.storage.output.OutputWithPath;
 import ch.ubique.uetlib.storage.utils.CopyUtils;
+
 import com.pivovarit.function.ThrowingRunnable;
+
 import jakarta.annotation.Nullable;
-import java.io.InputStream;
-import java.time.Duration;
-import java.time.OffsetDateTime;
-import java.util.Collection;
+
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.springframework.core.retry.RetryException;
 import org.springframework.core.retry.RetryPolicy;
 import org.springframework.core.retry.RetryTemplate;
+
+import java.io.InputStream;
+import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.util.Collection;
 
 public class RetryStorageClient implements StorageClient {
 

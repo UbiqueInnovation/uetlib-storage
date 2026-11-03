@@ -5,6 +5,10 @@ import static ch.ubique.uetlib.storage.logger.LogAtNullableLevel.atLevel;
 
 import ch.ubique.uetlib.core.utils.ArrayUtils;
 import ch.ubique.uetlib.storage.annotations.ListMapping;
+
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+
 import java.lang.reflect.Method;
 import java.text.MessageFormat;
 import java.util.Collection;
@@ -12,8 +16,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
 
 public class ListMappingInvocationHandler implements StorageMappingInvocationHandler {
 

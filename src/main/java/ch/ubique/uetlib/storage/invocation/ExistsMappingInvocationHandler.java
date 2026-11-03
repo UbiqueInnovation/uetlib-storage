@@ -5,9 +5,11 @@ import static ch.ubique.uetlib.storage.logger.LogAtNullableLevel.atLevel;
 
 import ch.ubique.uetlib.core.utils.ArrayUtils;
 import ch.ubique.uetlib.storage.annotations.ExistsMapping;
-import java.lang.reflect.Method;
+
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
+
+import java.lang.reflect.Method;
 
 public class ExistsMappingInvocationHandler implements StorageMappingInvocationHandler {
 
