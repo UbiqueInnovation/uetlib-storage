@@ -1,8 +1,10 @@
 package ch.ubique.uetlib.storage;
 
 import static ch.ubique.uetlib.core.utils.OptionalUtils.ofNullable;
+
 import static io.netty.handler.codec.http.HttpHeaderValues.MAX_AGE;
 import static io.netty.handler.codec.http.HttpHeaderValues.S_MAXAGE;
+
 import static java.util.Map.entry;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
@@ -12,16 +14,14 @@ import ch.ubique.uetlib.core.utils.HttpHeaderUtils;
 import ch.ubique.uetlib.core.utils.MapCollectors;
 import ch.ubique.uetlib.storage.annotations.OutputMapping;
 import ch.ubique.uetlib.storage.output.Output;
+
 import com.google.common.net.HttpHeaders;
+
 import io.minio.messages.RestoreRequest.CannedAcl;
+
 import jakarta.validation.ValidationException;
 import jakarta.validation.constraints.NotBlank;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.function.Function;
-import java.util.stream.Stream;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -31,6 +31,13 @@ import org.jetbrains.annotations.Contract;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 @SuppressWarnings({"UnusedReturnValue", "unused"})
 public final class OutputMetaData {

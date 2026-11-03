@@ -1,13 +1,15 @@
 package ch.ubique.uetlib.storage.utils;
 
 import ch.ubique.uetlib.core.utils.InputStreamUtils;
+
+import org.jspecify.annotations.Nullable;
+
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipException;
-import org.jspecify.annotations.Nullable;
 
 public final class CompressionUtils {
     private CompressionUtils() {}

@@ -5,8 +5,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import ch.ubique.uetlib.storage.CopyOptions;
 import ch.ubique.uetlib.storage.exception.NonRetryableStorageClientException;
+
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.time.Duration;
@@ -15,9 +21,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.junit.jupiter.api.*;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 /** Scripted HTTP responses exercise the real SDK; these do not prove Azure service behavior. */
 class AzureCopyFailureTest {

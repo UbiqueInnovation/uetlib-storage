@@ -5,8 +5,17 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import ch.ubique.uetlib.storage.CopyOptions;
 import ch.ubique.uetlib.storage.exception.NonRetryableStorageClientException;
+
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+
+import org.junit.jupiter.api.*;
+
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -17,11 +26,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.junit.jupiter.api.*;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 /** Real SDK retries against scripted HTTP responses, not a production S3 service test. */
 class S3CopyRetryTest {

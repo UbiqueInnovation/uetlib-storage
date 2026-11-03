@@ -1,8 +1,10 @@
 package ch.ubique.uetlib.storage.clients;
 
 import ch.ubique.uetlib.storage.OutputMetaDataProvider;
-import java.time.Duration;
+
 import org.jspecify.annotations.Nullable;
+
+import java.time.Duration;
 
 public final class CloudflareR2StorageClient extends RetryStorageClient {
 

@@ -2,10 +2,12 @@ package ch.ubique.uetlib.storage.clients;
 
 import static ch.ubique.uetlib.storage.clients.MinioStorageClient.partSize;
 import static ch.ubique.uetlib.storage.clients.MinioStorageClient.storageClientException;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.ubique.uetlib.storage.exception.NonRetryableStorageClientException;
 import ch.ubique.uetlib.storage.exception.RetryableStorageClientException;
+
 import io.minio.ObjectWriteArgs;
 import io.minio.errors.ErrorResponseException;
 import io.minio.errors.InsufficientDataException;
@@ -14,8 +16,10 @@ import io.minio.errors.InvalidResponseException;
 import io.minio.errors.MinioException;
 import io.minio.errors.ServerException;
 import io.minio.messages.ErrorResponse;
-import java.io.IOException;
+
 import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
 
 class MinioStorageClientTest {
 

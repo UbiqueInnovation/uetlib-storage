@@ -1,13 +1,15 @@
 package ch.ubique.uetlib.storage;
 
 import ch.ubique.uetlib.core.http.header.HttpHeader;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
 
 class OutputMetaDataTest {
 

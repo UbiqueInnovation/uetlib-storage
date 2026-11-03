@@ -6,18 +6,22 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-import ch.ubique.uetlib.image.blurhash.BlurHashClient;
+import ch.ubique.uetlib.core.image.blurhash.BlurHashClient;
 import ch.ubique.uetlib.storage.clients.FileSystemStorageClient;
 import ch.ubique.uetlib.storage.images.ImageStorageService;
 import ch.ubique.uetlib.storage.images.ImageVariant;
 import ch.ubique.uetlib.storage.output.InputStreamOutput;
+
 import com.drew.imaging.ImageProcessingException;
 import com.google.common.net.MediaType;
+
+import org.junit.jupiter.api.Test;
+
 import java.io.*;
 import java.time.Duration;
 import java.util.function.Function;
+
 import javax.imageio.ImageIO;
-import org.junit.jupiter.api.Test;
 
 class ImageStorageServiceTest {
 

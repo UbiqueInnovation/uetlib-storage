@@ -1,6 +1,7 @@
 package ch.ubique.uetlib.storage;
 
 import ch.ubique.uetlib.storage.annotations.*;
+
 import java.lang.annotation.Annotation;
 
 public enum StorageMappingType {

@@ -7,12 +7,14 @@ import ch.ubique.uetlib.core.file.ByteFile;
 import ch.ubique.uetlib.core.utils.ArrayUtils;
 import ch.ubique.uetlib.core.utils.InputStreamUtils;
 import ch.ubique.uetlib.storage.annotations.InputMapping;
-import java.io.InputStream;
-import java.lang.reflect.Method;
-import java.nio.file.Path;
+
 import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
+
+import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.nio.file.Path;
 
 public class InputMappingInvocationHandler implements StorageMappingInvocationHandler {
 

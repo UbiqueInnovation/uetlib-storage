@@ -2,16 +2,18 @@ package ch.ubique.uetlib.storage.images;
 
 import static java.util.Objects.requireNonNull;
 
-import ch.ubique.uetlib.image.blurhash.BlurHashClient;
-import ch.ubique.uetlib.image.blurhash.BlurHashRepresentation;
-import ch.ubique.uetlib.image.util.ImageUtils;
-import ch.ubique.uetlib.image.webp.Webp;
+import ch.ubique.uetlib.core.image.blurhash.BlurHashClient;
+import ch.ubique.uetlib.core.image.blurhash.BlurHashRepresentation;
+import ch.ubique.uetlib.core.image.util.ImageUtils;
 import ch.ubique.uetlib.storage.StorageClient;
 import ch.ubique.uetlib.storage.exception.StorageClientException;
 import ch.ubique.uetlib.storage.output.ByteOutput;
 import ch.ubique.uetlib.storage.output.InputStreamOutput;
+import ch.ubique.uetlib.webp.Webp;
+
 import com.drew.imaging.ImageProcessingException;
 import com.google.common.net.MediaType;
+
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;

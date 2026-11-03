@@ -10,6 +10,18 @@ import ch.ubique.uetlib.storage.output.OutputWithPath;
 import ch.ubique.uetlib.storage.utils.CompressionUtils;
 import ch.ubique.uetlib.storage.utils.CopyUtils;
 import ch.ubique.uetlib.storage.utils.PathUtils;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.DirectoryFileFilter;
+import org.apache.commons.io.filefilter.PrefixFileFilter;
+import org.apache.commons.io.filefilter.TrueFileFilter;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -26,16 +38,6 @@ import java.util.Collection;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.DirectoryFileFilter;
-import org.apache.commons.io.filefilter.PrefixFileFilter;
-import org.apache.commons.io.filefilter.TrueFileFilter;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.lang3.builder.ToStringStyle;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("unused")
 public class FileSystemStorageClient implements StorageClient {

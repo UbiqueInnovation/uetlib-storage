@@ -1,7 +1,8 @@
 package ch.ubique.uetlib.storage.invocation;
 
-import java.lang.reflect.Method;
 import org.jspecify.annotations.Nullable;
+
+import java.lang.reflect.Method;
 
 public interface StorageMappingInvocationHandler {
     Object invoke(

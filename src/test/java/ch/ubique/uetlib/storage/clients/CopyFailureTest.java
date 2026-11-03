@@ -8,19 +8,23 @@ import ch.ubique.uetlib.storage.CopyOptions;
 import ch.ubique.uetlib.storage.StorageClient;
 import ch.ubique.uetlib.storage.exception.NonRetryableStorageClientException;
 import ch.ubique.uetlib.storage.exception.RetryableStorageClientException;
+
 import io.minio.messages.RestoreRequest.CannedAcl;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Duration;
-import java.util.concurrent.*;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.springframework.core.retry.RetryPolicy;
 import org.springframework.core.retry.RetryTemplate;
+
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.*;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.concurrent.*;
 
 class CopyFailureTest {
     @TempDir Path directory;

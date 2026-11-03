@@ -7,11 +7,13 @@ import ch.ubique.uetlib.storage.exception.StorageClientException;
 import ch.ubique.uetlib.storage.output.Output;
 import ch.ubique.uetlib.storage.output.OutputWithPath;
 import ch.ubique.uetlib.storage.utils.CopyUtils;
+
+import org.jspecify.annotations.Nullable;
+import org.springframework.core.retry.RetryTemplate;
+
 import java.io.InputStream;
 import java.time.OffsetDateTime;
 import java.util.Collection;
-import org.jspecify.annotations.Nullable;
-import org.springframework.core.retry.RetryTemplate;
 
 public interface StorageClient {
 

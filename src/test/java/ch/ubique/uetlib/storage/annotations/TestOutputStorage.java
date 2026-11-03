@@ -1,10 +1,13 @@
 package ch.ubique.uetlib.storage.annotations;
 
 import ch.ubique.uetlib.storage.OutputMetaData;
+
 import jakarta.validation.constraints.NotBlank;
+
+import org.slf4j.event.Level;
+
 import java.io.IOException;
 import java.util.Map;
-import org.slf4j.event.Level;
 
 public interface TestOutputStorage {
 

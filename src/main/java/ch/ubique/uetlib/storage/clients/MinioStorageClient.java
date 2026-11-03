@@ -18,13 +18,22 @@ import ch.ubique.uetlib.storage.output.Output;
 import ch.ubique.uetlib.storage.output.OutputWithPath;
 import ch.ubique.uetlib.storage.utils.CompressionUtils;
 import ch.ubique.uetlib.storage.utils.PathUtils;
+
 import io.minio.*;
 import io.minio.Http.Method;
 import io.minio.credentials.Provider;
 import io.minio.credentials.StaticProvider;
 import io.minio.errors.*;
 import io.minio.messages.DeleteRequest;
+
 import jakarta.validation.Valid;
+
+import okhttp3.Dispatcher;
+import okhttp3.OkHttpClient;
+
+import org.apache.commons.lang3.NotImplementedException;
+import org.jspecify.annotations.Nullable;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.DirectoryNotEmptyException;
@@ -32,10 +41,6 @@ import java.text.MessageFormat;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.*;
-import okhttp3.Dispatcher;
-import okhttp3.OkHttpClient;
-import org.apache.commons.lang3.NotImplementedException;
-import org.jspecify.annotations.Nullable;
 
 /**
  * {@link StorageClient} to perform bucket and object operations to any Amazon S3 / MinIO compatible

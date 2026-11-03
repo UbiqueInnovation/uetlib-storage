@@ -1,7 +1,8 @@
 package ch.ubique.uetlib.storage.annotations;
 
-import java.io.IOException;
 import org.slf4j.event.Level;
+
+import java.io.IOException;
 
 public interface TestExistsStorage {
 

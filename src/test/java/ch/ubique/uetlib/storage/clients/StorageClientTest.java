@@ -9,6 +9,26 @@ import ch.ubique.uetlib.storage.StorageClient;
 import ch.ubique.uetlib.storage.exception.NonRetryableStorageClientException;
 import ch.ubique.uetlib.storage.exception.StorageClientException;
 import ch.ubique.uetlib.storage.output.ByteOutput;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.retry.RetryPolicy;
+import org.springframework.core.retry.RetryTemplate;
+import org.testcontainers.Testcontainers;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
+import org.testcontainers.images.PullPolicy;
+
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -24,23 +44,6 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.core.retry.RetryPolicy;
-import org.springframework.core.retry.RetryTemplate;
-import org.testcontainers.Testcontainers;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
-import org.testcontainers.images.PullPolicy;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 @SuppressWarnings("resource")
 class StorageClientTest {

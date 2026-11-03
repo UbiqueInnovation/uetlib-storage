@@ -11,6 +11,7 @@ import ch.ubique.uetlib.storage.output.OutputWithPath;
 import ch.ubique.uetlib.storage.utils.CompressionUtils;
 import ch.ubique.uetlib.storage.utils.CopyUtils;
 import ch.ubique.uetlib.storage.utils.PathUtils;
+
 import com.azure.core.http.HttpClient;
 import com.azure.core.http.RequestConditions;
 import com.azure.core.http.rest.PagedIterable;
@@ -26,6 +27,9 @@ import com.azure.storage.blob.options.BlobParallelUploadOptions;
 import com.azure.storage.blob.sas.BlobSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
 import com.azure.storage.common.policy.RequestRetryOptions;
+
+import org.jspecify.annotations.Nullable;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLDecoder;
@@ -40,7 +44,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.jspecify.annotations.Nullable;
 
 public class AzureBlobStorageClient implements StorageClient {
 

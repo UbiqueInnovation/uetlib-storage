@@ -1,14 +1,16 @@
 package ch.ubique.uetlib.storage.exception;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.jspecify.annotations.Nullable;
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.concurrent.TimeoutException;
+
 import javax.net.ssl.SSLHandshakeException;
-import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.jspecify.annotations.Nullable;
 
 public abstract sealed class StorageClientException extends IOException
         permits NonRetryableStorageClientException, RetryableStorageClientException {

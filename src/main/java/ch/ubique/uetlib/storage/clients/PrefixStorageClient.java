@@ -9,14 +9,16 @@ import ch.ubique.uetlib.storage.exception.StorageClientException;
 import ch.ubique.uetlib.storage.output.Output;
 import ch.ubique.uetlib.storage.output.OutputWithPath;
 import ch.ubique.uetlib.storage.utils.CopyUtils;
+
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
+import org.jetbrains.annotations.Nullable;
+
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.Objects;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.lang3.builder.ToStringStyle;
-import org.jetbrains.annotations.Nullable;
 
 public class PrefixStorageClient implements StorageClient {
 

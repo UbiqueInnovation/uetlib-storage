@@ -1,8 +1,9 @@
 package ch.ubique.uetlib.storage.logger;
 
-import java.util.function.Supplier;
 import org.slf4j.Marker;
 import org.slf4j.spi.LoggingEventBuilder;
+
+import java.util.function.Supplier;
 
 /** LoggingEventBuilder that is a no-op. */
 public class NullLoggingEventBuilder implements LoggingEventBuilder {

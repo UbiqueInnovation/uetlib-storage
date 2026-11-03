@@ -19,19 +19,13 @@ import ch.ubique.uetlib.storage.output.OutputWithPath;
 import ch.ubique.uetlib.storage.utils.CompressionUtils;
 import ch.ubique.uetlib.storage.utils.CopyUtils;
 import ch.ubique.uetlib.storage.utils.PathUtils;
+
 import jakarta.validation.Valid;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.DirectoryNotEmptyException;
-import java.text.MessageFormat;
-import java.time.Duration;
-import java.time.OffsetDateTime;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jspecify.annotations.Nullable;
+
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider;
@@ -50,6 +44,16 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.DownloadRequest;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.DirectoryNotEmptyException;
+import java.text.MessageFormat;
+import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 public class AmazonS3StorageClient implements StorageClient {
 
