@@ -1,0 +1,84 @@
+package ch.uetlib.storage.invocation;
+
+import static ch.uetlib.storage.invocation.InvocationHandlerUtil.*;
+import static ch.uetlib.storage.logger.LogAtNullableLevel.atLevel;
+
+import ch.uetlib.core.file.ByteFile;
+import ch.uetlib.core.utils.ArrayUtils;
+import ch.uetlib.core.utils.InputStreamUtils;
+import ch.uetlib.storage.annotations.InputMapping;
+
+import org.apache.commons.lang3.StringUtils;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+
+import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.nio.file.Path;
+
+public class InputMappingInvocationHandler implements StorageMappingInvocationHandler {
+
+    private final Logger logger;
+
+    public InputMappingInvocationHandler(final Logger logger) {
+        this.logger = logger;
+    }
+
+    @Override
+    public Object invoke(
+            final StorageMappingInvocationProperties storageMappingInvocationProperties,
+            final Method method,
+            final Object @Nullable [] args)
+            throws Throwable {
+        final var storageClient = storageMappingInvocationProperties.storageClient();
+        final var inputMapping = findAnnotation(method, InputMapping.class);
+        final var level = ArrayUtils.singletonOrNull(inputMapping.logLevel());
+
+        final var returnType = method.getReturnType();
+
+        final var basePath = storageMappingInvocationProperties.basePath();
+        final var path =
+                getPath(
+                        method.getParameters(),
+                        args,
+                        getPathTemplate(basePath, inputMapping.path()));
+
+        // Here, the INPUT really starts
+
+        atLevel(logger, level)
+                .log(
+                        "reading content of type {} from path {} with doUncompressIfNeeded={}",
+                        inputMapping.contentType(),
+                        path,
+                        inputMapping.doUncompressIfNeeded());
+        final var inputStream = storageClient.read(path, inputMapping.doUncompressIfNeeded());
+        if (InputStream.class.isAssignableFrom(returnType)) {
+            atLevel(logger, level).log("and returning the resulting stream as-is");
+            return inputStream;
+        }
+
+        if (byte[].class.isAssignableFrom(returnType)) {
+            atLevel(logger, level).log("by reading the input stream to a byte[]");
+            return InputStreamUtils.readBytesAndClose(inputStream);
+        }
+
+        if (ByteFile.class.isAssignableFrom(returnType)) {
+            atLevel(logger, level).log(" by reading the input stream to a ByteFile");
+            final var bytes = InputStreamUtils.readBytesAndClose(inputStream);
+            final var fileName = Path.of(path).getFileName().toString();
+            final var contentType = StringUtils.defaultIfBlank(inputMapping.contentType(), null);
+            return ByteFile.fromBytes(bytes, fileName, contentType);
+        }
+
+        final var objectMapper =
+                getObjectMapper(storageMappingInvocationProperties.objectMapper(), args);
+        atLevel(logger, level)
+                .log(
+                        "reading content of type {} from path {} and parsing it to type {} using"
+                                + " the supplied object mapper",
+                        inputMapping.contentType(),
+                        path,
+                        returnType);
+        return objectMapper.readValue(inputStream, returnType);
+    }
+}

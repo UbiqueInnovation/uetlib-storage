@@ -1,0 +1,332 @@
+package ch.uetlib.storage;
+
+import static ch.uetlib.core.utils.OptionalUtils.ofNullable;
+
+import static io.netty.handler.codec.http.HttpHeaderValues.MAX_AGE;
+import static io.netty.handler.codec.http.HttpHeaderValues.S_MAXAGE;
+
+import static java.util.Map.entry;
+import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNullElse;
+
+import ch.uetlib.core.http.header.HttpHeader;
+import ch.uetlib.core.utils.HttpHeaderUtils;
+import ch.uetlib.core.utils.MapCollectors;
+import ch.uetlib.storage.annotations.OutputMapping;
+import ch.uetlib.storage.output.Output;
+
+import com.google.common.net.HttpHeaders;
+
+import io.minio.messages.RestoreRequest.CannedAcl;
+
+import jakarta.validation.ValidationException;
+import jakarta.validation.constraints.NotBlank;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
+import org.jetbrains.annotations.Contract;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.function.Function;
+import java.util.stream.Stream;
+
+@SuppressWarnings({"UnusedReturnValue", "unused"})
+public final class OutputMetaData {
+    private static final Logger logger = LoggerFactory.getLogger(OutputMetaData.class);
+
+    @NotBlank private final String cacheControl;
+
+    @Nullable private Instant expires;
+    @Nullable private Instant bestBefore;
+    @Nullable private Instant nextRefresh;
+    @Nullable private Duration backoff;
+    @Nullable private Long contentLengthUncompressed;
+    @Nullable private CannedAcl accessPolicy;
+    @Nullable private String customAccessPolicy;
+
+    /**
+     * @param cacheControl must not be blank. You can create a valid value using e.g.
+     *     org.springframework.http.CacheControl.getHeaderValue
+     */
+    public OutputMetaData(final String cacheControl) {
+        this.cacheControl = cacheControl;
+        if (StringUtils.isBlank(cacheControl)) {
+            throw new ValidationException("An empty cache control is disallowed.");
+        }
+    }
+
+    /**
+     * @param maxAge Duration must not be null
+     * @param sMaxAge Duration will be set to maxAge if null
+     */
+    public OutputMetaData(final Duration maxAge, @Nullable final Duration sMaxAge) {
+        this(
+                MAX_AGE
+                        + "="
+                        + requireNonNull(maxAge).toSeconds()
+                        + ", "
+                        + S_MAXAGE
+                        + "="
+                        + requireNonNullElse(sMaxAge, maxAge).toSeconds());
+    }
+
+    public OutputMetaData(final OutputMetaData outputMetaData) {
+        this.cacheControl = outputMetaData.cacheControl;
+        this.expires = outputMetaData.expires;
+        this.bestBefore = outputMetaData.bestBefore;
+        this.nextRefresh = outputMetaData.nextRefresh;
+        this.backoff = outputMetaData.backoff;
+        this.contentLengthUncompressed = outputMetaData.contentLengthUncompressed;
+        this.accessPolicy = outputMetaData.accessPolicy;
+        this.customAccessPolicy = outputMetaData.customAccessPolicy;
+    }
+
+    /**
+     * This is used if neither a {@link OutputMetaData} is passed to the {@link
+     * OutputMapping}/{@link StorageClient#write} method nor a default is provided to the {@link
+     * StorageClient}.
+     *
+     * <p>Sets both {@code max-age} and {@code s-maxage} to one day.
+     */
+    public static OutputMetaData defaults() {
+        return new OutputMetaData(Duration.ofDays(1), Duration.ofDays(1));
+    }
+
+    @Contract("!null, _ -> param1; null, !null -> new")
+    public static OutputMetaData resolveOutputMetaData(
+            @Nullable final OutputMetaData outputMetaData,
+            @Nullable final OutputMetaDataProvider outputMetaDataProvider) {
+        if (outputMetaData != null) {
+            return new OutputMetaData(outputMetaData);
+        }
+        if (outputMetaDataProvider != null) {
+            return outputMetaDataProvider.createOutputMetaData();
+        }
+        return OutputMetaData.defaults();
+    }
+
+    @Contract("!null, _, _ -> param1; null, !null, _ -> new")
+    public static OutputMetaData resolveOutputMetaData(
+            @Nullable final OutputMetaData outputMetaData,
+            @Nullable final OutputMetaDataProvider outputMetaDataProvider,
+            final Output output) {
+        final var resolvedOutputMetaData =
+                resolveOutputMetaData(outputMetaData, outputMetaDataProvider);
+        setUncompressedContentLength(output, resolvedOutputMetaData);
+        return resolvedOutputMetaData;
+    }
+
+    private static void setUncompressedContentLength(
+            final Output output, final OutputMetaData resolvedOutputMetaData) {
+        if (resolvedOutputMetaData.contentLengthUncompressed != null
+                && !resolvedOutputMetaData.contentLengthUncompressed.equals(
+                        output.uncompressedContentLength())) {
+            logger.warn(
+                    "resolvedOutputMetaData.contentLengthUncompressed was already set to '{}' and"
+                            + " is now overwritten with '{}'",
+                    resolvedOutputMetaData.contentLengthUncompressed,
+                    output.uncompressedContentLength());
+        }
+        resolvedOutputMetaData.contentLengthUncompressed(output.uncompressedContentLength());
+    }
+
+    public OutputMetaData expires(final Instant expires) {
+        this.expires = requireNonNull(expires);
+        return this;
+    }
+
+    public OutputMetaData bestBefore(final Instant bestBefore) {
+        requireNonNull(bestBefore);
+        this.bestBefore = bestBefore;
+        return this;
+    }
+
+    public OutputMetaData nextRefresh(final Instant nextRefresh) {
+        requireNonNull(nextRefresh);
+        this.nextRefresh = nextRefresh;
+        return this;
+    }
+
+    public OutputMetaData backoff(final Duration backoff) {
+        requireNonNull(backoff);
+        this.backoff = backoff;
+        return this;
+    }
+
+    /**
+     * Set an access policy for the object. This is only used for AWS S3. To set a custom access
+     * policy, use {@link #customAccessPolicy(String)}.
+     *
+     * @throws IllegalStateException if {@link #customAccessPolicy(String)} was already called
+     * @param accessPolicy The access policy
+     * @return this to allow chaining
+     */
+    public OutputMetaData accessPolicy(final CannedAcl accessPolicy) throws IllegalStateException {
+        if (customAccessPolicy != null) {
+            throw new IllegalStateException(
+                    "Cannot set access policy and custom access policy at the same time");
+        }
+        requireNonNull(accessPolicy);
+        this.accessPolicy = accessPolicy;
+        return this;
+    }
+
+    /**
+     * Set a custom access policy for the object. This is only used for AWS S3. To set a predefined
+     * access policy, use {@link #accessPolicy(CannedAcl)}. This method allows every string value,
+     * thus the user is responsible for the correctness of the value.
+     *
+     * @throws IllegalStateException if {@link #accessPolicy(CannedAcl)} was already called
+     * @param customAccessPolicy The custom access policy
+     * @return this to allow chaining
+     */
+    public OutputMetaData customAccessPolicy(final String customAccessPolicy)
+            throws IllegalStateException {
+        if (accessPolicy != null) {
+            throw new IllegalStateException(
+                    "Cannot set access policy and custom access policy at the same time");
+        }
+        requireNonNull(customAccessPolicy);
+        this.customAccessPolicy = customAccessPolicy;
+        return this;
+    }
+
+    public OutputMetaData contentLengthUncompressed(final Long contentLengthUncompressed) {
+        requireNonNull(contentLengthUncompressed);
+        this.contentLengthUncompressed = contentLengthUncompressed;
+        return this;
+    }
+
+    public String createCacheControl() {
+        return cacheControl;
+    }
+
+    public Optional<String> createCannedAcl() {
+        return ofNullable(customAccessPolicy)
+                .or(() -> ofNullable(accessPolicy).map(CannedAcl::toString));
+    }
+
+    public Optional<Instant> expiresAsInstant() {
+        return Optional.ofNullable(expires);
+    }
+
+    public Optional<String> expires() {
+        return Optional.ofNullable(expires).map(HttpHeaderUtils::formatHttpHeaderDate);
+    }
+
+    private List<Entry<String, String>> createStandardHeaderEntries() {
+        final var entries = new ArrayList<Entry<String, String>>();
+
+        if (expires != null) {
+            entries.add(entry(HttpHeaders.EXPIRES, HttpHeaderUtils.formatHttpHeaderDate(expires)));
+        }
+
+        return entries;
+    }
+
+    private List<Entry<HttpHeader, String>> createCustomHeaderEntries() {
+        final var entries = new ArrayList<Entry<HttpHeader, String>>();
+
+        if (nextRefresh != null) {
+            entries.add(
+                    entry(
+                            HttpHeader.NEXT_REFRESH,
+                            HttpHeaderUtils.formatHttpHeaderDate(nextRefresh)));
+        }
+        if (bestBefore != null) {
+            entries.add(
+                    entry(
+                            HttpHeader.BEST_BEFORE,
+                            HttpHeaderUtils.formatHttpHeaderDate(bestBefore)));
+        }
+        if (backoff != null) {
+            entries.add(entry(HttpHeader.BACKOFF, String.valueOf(backoff.getSeconds())));
+        }
+        if (contentLengthUncompressed != null) {
+            entries.add(
+                    entry(
+                            HttpHeader.CONTENT_LENGTH_UNCOMPRESSED,
+                            String.valueOf(contentLengthUncompressed)));
+        }
+
+        return entries;
+    }
+
+    public Map<String, String> createMinioMetaDataMap() {
+        return createCustomHeadersWithKeyMapper(HttpHeader::value);
+    }
+
+    public Map<String, String> createAzureMetaDataMap() {
+        final var customHeaderEntries =
+                createCustomHeadersWithKeyMapper(HttpHeader::noDashesAzure).entrySet();
+
+        return Stream.concat(createStandardHeaderEntries().stream(), customHeaderEntries.stream())
+                .collect(MapCollectors.entriesToMap());
+    }
+
+    public Map<String, String> createCustomHeadersWithKeyMapper(
+            final Function<HttpHeader, String> keyMapper) {
+        return createCustomHeaderEntries().stream()
+                .map(e -> entry(keyMapper.apply(e.getKey()), e.getValue()))
+                .collect(MapCollectors.entriesToMap());
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof final OutputMetaData that)) {
+            return false;
+        }
+
+        return new EqualsBuilder()
+                .append(cacheControl, that.cacheControl)
+                .append(expires, that.expires)
+                .append(bestBefore, that.bestBefore)
+                .append(nextRefresh, that.nextRefresh)
+                .append(backoff, that.backoff)
+                .append(contentLengthUncompressed, that.contentLengthUncompressed)
+                .append(accessPolicy, that.accessPolicy)
+                .append(customAccessPolicy, that.customAccessPolicy)
+                .isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 37)
+                .append(cacheControl)
+                .append(expires)
+                .append(bestBefore)
+                .append(nextRefresh)
+                .append(backoff)
+                .append(contentLengthUncompressed)
+                .append(accessPolicy)
+                .append(customAccessPolicy)
+                .toHashCode();
+    }
+
+    @Override
+    public String toString() {
+        return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+                .append("cacheControl", cacheControl)
+                .append("expires", expires)
+                .append("bestBefore", bestBefore)
+                .append("nextRefresh", nextRefresh)
+                .append("backoff", backoff)
+                .append("contentLengthUncompressed", contentLengthUncompressed)
+                .append("accessPolicy", accessPolicy)
+                .append("customAccessPolicy", customAccessPolicy)
+                .toString();
+    }
+}
