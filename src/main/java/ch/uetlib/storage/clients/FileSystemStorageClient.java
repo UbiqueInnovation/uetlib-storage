@@ -61,7 +61,7 @@ public class FileSystemStorageClient implements StorageClient {
         if (!subPath.contains("/")) {
             return relativePath;
         }
-        return queryPath + subPath.split("/")[0] + "/";
+        return queryPath + subPath.substring(0, subPath.indexOf('/')) + "/";
     }
 
     private static Collection<File> listFilesWithPrefix(final Path completePath) {

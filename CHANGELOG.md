@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## UNRELEASED
+
+- Fix the warnings of Error Prone's default checks: `ImageVariant` keys convert case with `Locale.ROOT`, signed URL
+  expiry is computed in UTC, and the backoff header uses `Duration.toSeconds()`.
+
 ## 3.0.3
 
 - Build pull requests, including forks, and pushes to `main` instead of every branch push; use shared Maven

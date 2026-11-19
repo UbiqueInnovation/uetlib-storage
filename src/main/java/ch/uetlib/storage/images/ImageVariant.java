@@ -2,6 +2,8 @@ package ch.uetlib.storage.images;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.Locale;
+
 public enum ImageVariant {
     ORIGINAL,
     THUMBNAIL(320),
@@ -15,7 +17,7 @@ public enum ImageVariant {
     }
 
     ImageVariant(final @Nullable Integer defaultSize) {
-        this.key = name().toLowerCase();
+        this.key = name().toLowerCase(Locale.ROOT);
         this.defaultSize = defaultSize;
     }
 
