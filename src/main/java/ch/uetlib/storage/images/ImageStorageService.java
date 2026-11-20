@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.function.Function;
 
 /**
@@ -189,7 +190,7 @@ public class ImageStorageService {
     @SuppressWarnings("UnusedReturnValue")
     public String getSignedUrl(final String path) throws StorageClientException {
         return storageClient.getSignedUrl(
-                path, OffsetDateTime.now().plusNanos(sasExpiry.toNanos()));
+                path, OffsetDateTime.now(ZoneOffset.UTC).plusNanos(sasExpiry.toNanos()));
     }
 
     public String getUrl(final String path) throws StorageClientException {

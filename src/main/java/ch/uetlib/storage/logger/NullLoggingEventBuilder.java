@@ -63,7 +63,7 @@ public class NullLoggingEventBuilder implements LoggingEventBuilder {
     }
 
     @Override
-    public void log(final String message, final Object arg0, final Object arg1) {
+    public void log(final String message, final Object arg1, final Object arg2) {
         // noop
     }
 

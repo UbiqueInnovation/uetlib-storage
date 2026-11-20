@@ -14,9 +14,8 @@ public record StorageMethodInfo(
         StorageMappingType storageMappingType,
         Annotation storageMappingAnnotation) {
 
-    private <T extends Annotation> T castStorageMappingAnnotation() {
-        //noinspection unchecked
-        return (T) storageMappingAnnotation;
+    private <T extends Annotation> T castStorageMappingAnnotation(final Class<T> type) {
+        return type.cast(storageMappingAnnotation);
     }
 
     /**
@@ -26,7 +25,7 @@ public record StorageMethodInfo(
      * @throws ClassCastException if the {@link #storageMappingType()} is not {@link OutputMapping}.
      */
     public OutputMapping outputMappingAnnotation() {
-        return castStorageMappingAnnotation();
+        return castStorageMappingAnnotation(OutputMapping.class);
     }
 
     /**
@@ -36,7 +35,7 @@ public record StorageMethodInfo(
      * @throws ClassCastException if the {@link #storageMappingType()} is not {@link InputMapping}.
      */
     public InputMapping inputMappingAnnotation() {
-        return castStorageMappingAnnotation();
+        return castStorageMappingAnnotation(InputMapping.class);
     }
 
     /**
@@ -46,7 +45,7 @@ public record StorageMethodInfo(
      * @throws ClassCastException if the {@link #storageMappingType()} is not {@link ListMapping}.
      */
     public ListMapping listMappingAnnotation() {
-        return castStorageMappingAnnotation();
+        return castStorageMappingAnnotation(ListMapping.class);
     }
 
     /**
@@ -56,7 +55,7 @@ public record StorageMethodInfo(
      * @throws ClassCastException if the {@link #storageMappingType()} is not {@link DeleteMapping}.
      */
     public DeleteMapping deleteMappingAnnotation() {
-        return castStorageMappingAnnotation();
+        return castStorageMappingAnnotation(DeleteMapping.class);
     }
 
     /**
@@ -66,6 +65,6 @@ public record StorageMethodInfo(
      * @throws ClassCastException if the {@link #storageMappingType()} is not {@link ExistsMapping}.
      */
     public ExistsMapping existsMappingAnnotation() {
-        return castStorageMappingAnnotation();
+        return castStorageMappingAnnotation(ExistsMapping.class);
     }
 }

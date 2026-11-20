@@ -249,7 +249,7 @@ public final class OutputMetaData {
                             HttpHeaderUtils.formatHttpHeaderDate(bestBefore)));
         }
         if (backoff != null) {
-            entries.add(entry(HttpHeader.BACKOFF, String.valueOf(backoff.getSeconds())));
+            entries.add(entry(HttpHeader.BACKOFF, String.valueOf(backoff.toSeconds())));
         }
         if (contentLengthUncompressed != null) {
             entries.add(
