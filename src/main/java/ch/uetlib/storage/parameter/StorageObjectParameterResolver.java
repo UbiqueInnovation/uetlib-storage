@@ -13,15 +13,13 @@ public final class StorageObjectParameterResolver {
     public static int getStorageObjectParameterIndex(final Method method) {
         final var parameterAnnotations = method.getParameterAnnotations();
         return IntStream.range(0, parameterAnnotations.length)
-                .filter(
-                        i ->
-                                Arrays.stream(parameterAnnotations[i])
-                                        .anyMatch(StorageObject.class::isInstance))
+                .filter(i ->
+                        Arrays.stream(parameterAnnotations[i])
+                                .anyMatch(StorageObject.class::isInstance))
                 .findFirst()
-                .orElseThrow(
-                        () ->
-                                new IllegalStateException(
-                                        "OutputMapping requires one argument to be"
-                                                + " annotated with '@StorageObject'"));
+                .orElseThrow(() ->
+                        new IllegalStateException(
+                                "OutputMapping requires one argument to be"
+                                        + " annotated with '@StorageObject'"));
     }
 }

@@ -161,11 +161,10 @@ public class RetryStorageClient implements StorageClient {
     private void retryRunnable(final ThrowingRunnable<StorageClientException> runnable)
             throws StorageClientException {
         try {
-            retryTemplate.execute(
-                    () -> {
-                        runnable.run();
-                        return null;
-                    });
+            retryTemplate.execute(() -> {
+                runnable.run();
+                return null;
+            });
         } catch (final RetryException e) {
             throw createStorageClientException(e);
         }
