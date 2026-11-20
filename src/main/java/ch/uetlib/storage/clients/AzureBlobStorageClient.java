@@ -159,7 +159,9 @@ public class AzureBlobStorageClient implements StorageClient {
                             ? "unknown"
                             : properties.getCopyStatus().toString();
             if ("pending".equals(status)) {
-                Thread.sleep(Math.clamp(CopyUtils.remaining(deadline).toMillis(), 1L, 250L));
+                Thread.sleep(
+                        Duration.ofMillis(
+                                Math.clamp(CopyUtils.remaining(deadline).toMillis(), 1L, 250L)));
             }
         }
         CopyUtils.remaining(deadline);
