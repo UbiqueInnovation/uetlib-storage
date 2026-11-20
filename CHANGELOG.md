@@ -4,6 +4,7 @@
 
 - Fix the warnings of Error Prone's default checks: `ImageVariant` keys convert case with `Locale.ROOT`, signed URL
   expiry is computed in UTC, and the backoff header uses `Duration.toSeconds()`.
+- Wait between Azure copy status polls with `Thread.sleep(Duration)` (Error Prone `PreferJavaTimeOverload`).
 
 ## 3.0.3
 
