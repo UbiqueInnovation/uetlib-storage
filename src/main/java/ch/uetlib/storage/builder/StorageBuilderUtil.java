@@ -127,34 +127,30 @@ public final class StorageBuilderUtil {
     public static Map<StorageMappingType, List<StorageMethodInfo>> getStorageMethodsByAnnotation(
             final Class<?> storageClass) {
         return Arrays.stream(storageClass.getMethods())
-                .map(
-                        method -> {
-                            final var maybeStorageMapping =
-                                    findAnnotation(method, StorageMapping.class);
-                            if (maybeStorageMapping.isEmpty()) {
-                                final var validStorageMappingAnnotationTypes =
-                                        Arrays.stream(StorageMappingType.values())
-                                                .map(StorageMappingType::mappingAnnotationType)
-                                                .toList();
-                                throw new IllegalArgumentException(
-                                        MessageFormat.format(
-                                                "Storage interface {0} is not valid: Method"
-                                                        + " ''{0}::{1}'' is not annotated by one of"
-                                                        + " {2}",
-                                                method.getDeclaringClass().getSimpleName(),
-                                                method.getName(),
-                                                validStorageMappingAnnotationTypes.stream()
-                                                        .map(
-                                                                a ->
-                                                                        MessageFormat.format(
-                                                                                "@{0}",
-                                                                                a.getSimpleName()))
-                                                        .toList()));
-                            }
-                            final var storageMethodInfo = findStorageMethodInfo(method);
-                            validateMappingMethod(storageMethodInfo);
-                            return storageMethodInfo;
-                        })
+                .map(method -> {
+                    final var maybeStorageMapping = findAnnotation(method, StorageMapping.class);
+                    if (maybeStorageMapping.isEmpty()) {
+                        final var validStorageMappingAnnotationTypes =
+                                Arrays.stream(StorageMappingType.values())
+                                        .map(StorageMappingType::mappingAnnotationType)
+                                        .toList();
+                        throw new IllegalArgumentException(
+                                MessageFormat.format(
+                                        "Storage interface {0} is not valid: Method"
+                                                + " ''{0}::{1}'' is not annotated by one of"
+                                                + " {2}",
+                                        method.getDeclaringClass().getSimpleName(),
+                                        method.getName(),
+                                        validStorageMappingAnnotationTypes.stream()
+                                                .map(a ->
+                                                        MessageFormat.format(
+                                                                "@{0}", a.getSimpleName()))
+                                                .toList()));
+                    }
+                    final var storageMethodInfo = findStorageMethodInfo(method);
+                    validateMappingMethod(storageMethodInfo);
+                    return storageMethodInfo;
+                })
                 .collect(Collectors.groupingBy(StorageMethodInfo::storageMappingType));
     }
 
@@ -206,9 +202,8 @@ public final class StorageBuilderUtil {
                 // All jakarta annotations are also accepted
                 final var parameterAnnotationTypesExcludeJakarta =
                         parameterAnnotationTypes.stream()
-                                .filter(
-                                        annotation ->
-                                                !annotation.getPackageName().startsWith("jakarta"))
+                                .filter(annotation ->
+                                        !annotation.getPackageName().startsWith("jakarta"))
                                 .collect(toSet());
                 if (!validParameterAnnotationTypes.containsAll(
                         parameterAnnotationTypesExcludeJakarta)) {

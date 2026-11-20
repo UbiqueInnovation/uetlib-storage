@@ -92,7 +92,6 @@ public class AmazonS3StorageClient implements StorageClient {
                         .credentialsProvider(WebIdentityTokenFileCredentialsProvider.create())
                         .region(Region.of(Objects.requireNonNullElse(region, DEFAULT_REGION)))
                         .multipartEnabled(true)
-                        // TODO: test in deployment if checksums work as expected for gzip uploads
                         .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
                         .httpClientBuilder(
                                 NettyNioAsyncHttpClient.builder()
@@ -152,7 +151,6 @@ public class AmazonS3StorageClient implements StorageClient {
                                         .connectionTimeout(timeoutOrDefault)
                                         .readTimeout(timeoutOrDefault)
                                         .writeTimeout(timeoutOrDefault))
-                        // TODO: test in deployment if checksums work as expected for gzip uploads
                         .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
                         .build();
         this.tm = S3TransferManager.builder().s3Client(s3AsyncClient).build();
@@ -297,23 +295,18 @@ public class AmazonS3StorageClient implements StorageClient {
 
             try (final var requestBodyAndClosable = createRequestBody(output)) {
                 final var upload =
-                        tm.upload(
-                                uploadRequestBuilder ->
-                                        uploadRequestBuilder
-                                                .requestBody(requestBodyAndClosable.requestBody())
-                                                .putObjectRequest(
-                                                        req ->
-                                                                req.bucket(bucket)
-                                                                        .key(path)
-                                                                        .contentType(contentType)
-                                                                        .contentEncoding(
-                                                                                contentEncoding)
-                                                                        .cacheControl(cacheControl)
-                                                                        .expires(expires)
-                                                                        .acl(acl)
-                                                                        .metadata(
-                                                                                createUserMetadata(
-                                                                                        metaData))));
+                        tm.upload(uploadRequestBuilder ->
+                                uploadRequestBuilder
+                                        .requestBody(requestBodyAndClosable.requestBody())
+                                        .putObjectRequest(req ->
+                                                req.bucket(bucket)
+                                                        .key(path)
+                                                        .contentType(contentType)
+                                                        .contentEncoding(contentEncoding)
+                                                        .cacheControl(cacheControl)
+                                                        .expires(expires)
+                                                        .acl(acl)
+                                                        .metadata(createUserMetadata(metaData))));
                 // Wait for the upload to finish - exceptions aren't thrown until 'join' is called
                 upload.completionFuture().join();
             }
@@ -328,25 +321,26 @@ public class AmazonS3StorageClient implements StorageClient {
     }
 
     private AsyncRequestBodyAndCloseable createRequestBody(final Output output) throws IOException {
-        if (output instanceof final FileOutput fileOutput) {
-            return AsyncRequestBodyAndCloseable.of(AsyncRequestBody.fromFile(fileOutput.file()));
-        }
-        if (output instanceof final ByteOutput byteOutput) {
-            return AsyncRequestBodyAndCloseable.of(AsyncRequestBody.fromBytes(byteOutput.value()));
-        }
-        if (output instanceof GZipOutput(final var uncompressed)
-                && uncompressed instanceof final ByteOutput byteOutput) {
-            final var compressedBytes = CompressionUtils.gzipCompress(byteOutput.value());
-            return AsyncRequestBodyAndCloseable.of(AsyncRequestBody.fromBytes(compressedBytes));
-        }
-
-        final var inputStream = output.read();
-        return AsyncRequestBodyAndCloseable.of(
-                AsyncRequestBody.fromInputStream(
-                        inputStream,
-                        output.contentLength() < 0L ? null : output.contentLength(),
-                        taskExecutor),
-                inputStream);
+        return switch (output) {
+            case final FileOutput fileOutput ->
+                    AsyncRequestBodyAndCloseable.of(AsyncRequestBody.fromFile(fileOutput.file()));
+            case final ByteOutput byteOutput ->
+                    AsyncRequestBodyAndCloseable.of(AsyncRequestBody.fromBytes(byteOutput.value()));
+            case GZipOutput(final var uncompressed)
+                    when uncompressed instanceof final ByteOutput byteOutput ->
+                    AsyncRequestBodyAndCloseable.of(
+                            AsyncRequestBody.fromBytes(
+                                    CompressionUtils.gzipCompress(byteOutput.value())));
+            default -> {
+                final var inputStream = output.read();
+                yield AsyncRequestBodyAndCloseable.of(
+                        AsyncRequestBody.fromInputStream(
+                                inputStream,
+                                output.contentLength() < 0L ? null : output.contentLength(),
+                                taskExecutor),
+                        inputStream);
+            }
+        };
     }
 
     private Map<String, String> createUserMetadata(final OutputMetaData outputMetaData) {
@@ -377,9 +371,8 @@ public class AmazonS3StorageClient implements StorageClient {
         try {
             final var downloadRequest =
                     DownloadRequest.builder()
-                            .getObjectRequest(
-                                    getObjectRequestBuilder ->
-                                            getObjectRequestBuilder.bucket(bucket).key(path))
+                            .getObjectRequest(getObjectRequestBuilder ->
+                                    getObjectRequestBuilder.bucket(bucket).key(path))
                             .responseTransformer(AsyncResponseTransformer.toBlockingInputStream())
                             .build();
             final var download = tm.download(downloadRequest).completionFuture().join().result();
@@ -417,18 +410,13 @@ public class AmazonS3StorageClient implements StorageClient {
 
         final var errorsAndDeleted =
                 StreamUtils.chunked(objectsToDelete, 1000)
-                        .map(
-                                chunk ->
-                                        s3AsyncClient
-                                                .deleteObjects(
-                                                        builder ->
-                                                                builder.bucket(bucket)
-                                                                        .delete(
-                                                                                deleteBuilder ->
-                                                                                        deleteBuilder
-                                                                                                .objects(
-                                                                                                        chunk)))
-                                                .join())
+                        .map(chunk ->
+                                s3AsyncClient
+                                        .deleteObjects(builder ->
+                                                builder.bucket(bucket)
+                                                        .delete(deleteBuilder ->
+                                                                deleteBuilder.objects(chunk)))
+                                        .join())
                         .collect(
                                 Collectors.teeing(
                                         Collectors.flatMapping(
@@ -535,18 +523,16 @@ public class AmazonS3StorageClient implements StorageClient {
                     final PresignedGetObjectRequest presignedRequest;
                     try (final var presigner = presignedBuilder.build()) {
                         presignedRequest =
-                                presigner.presignGetObject(
-                                        builder ->
-                                                builder.getObjectRequest(
-                                                                objectRequestBuilder ->
-                                                                        objectRequestBuilder
-                                                                                .bucket(bucket)
-                                                                                .key(path))
-                                                        .signatureDuration(
-                                                                Duration.between(
-                                                                        OffsetDateTime.now(
-                                                                                expiry.getOffset()),
-                                                                        expiry)));
+                                presigner.presignGetObject(builder ->
+                                        builder.getObjectRequest(objectRequestBuilder ->
+                                                        objectRequestBuilder
+                                                                .bucket(bucket)
+                                                                .key(path))
+                                                .signatureDuration(
+                                                        Duration.between(
+                                                                OffsetDateTime.now(
+                                                                        expiry.getOffset()),
+                                                                expiry)));
                     }
 
                     yield presignedRequest.url().toString();
@@ -555,18 +541,16 @@ public class AmazonS3StorageClient implements StorageClient {
                     final PresignedPutObjectRequest presignedRequest;
                     try (final var presigner = presignedBuilder.build()) {
                         presignedRequest =
-                                presigner.presignPutObject(
-                                        builder ->
-                                                builder.putObjectRequest(
-                                                                objectRequestBuilder ->
-                                                                        objectRequestBuilder
-                                                                                .bucket(bucket)
-                                                                                .key(path))
-                                                        .signatureDuration(
-                                                                Duration.between(
-                                                                        OffsetDateTime.now(
-                                                                                expiry.getOffset()),
-                                                                        expiry)));
+                                presigner.presignPutObject(builder ->
+                                        builder.putObjectRequest(objectRequestBuilder ->
+                                                        objectRequestBuilder
+                                                                .bucket(bucket)
+                                                                .key(path))
+                                                .signatureDuration(
+                                                        Duration.between(
+                                                                OffsetDateTime.now(
+                                                                        expiry.getOffset()),
+                                                                expiry)));
                     }
                     yield presignedRequest.url().toString();
                 }
