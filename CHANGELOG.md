@@ -1,6 +1,18 @@
 # CHANGELOG
 
-## UNRELEASED
+## 3.1.0
+
+- `uetlib-parent` updated to
+  `2026.11.5`: [Changelog/2026.11.5](https://github.com/UbiqueInnovation/uetlib-parent/blob/main/CHANGELOG.md#2026115) [Diff/2026.11.1-2026.11.5](https://github.com/UbiqueInnovation/uetlib-parent/compare/v2026.11.1...v2026.11.5)
+- `uetlib-core` updated to
+  `3.1.0`: [Changelog/3.1.0](https://github.com/UbiqueInnovation/uetlib-core/blob/main/CHANGELOG.md#310) [Diff/3.0.1-3.1.0](https://github.com/UbiqueInnovation/uetlib-core/compare/v3.0.1...v3.1.0)
+- `uetlib-test` updated to
+  `3.1.0`: [Changelog/3.1.0](https://github.com/UbiqueInnovation/uetlib-test/blob/main/CHANGELOG.md#310) [Diff/3.0.1-3.1.0](https://github.com/UbiqueInnovation/uetlib-test/compare/v3.0.1...v3.1.0)
+- `uetlib-testcontainers` updated to
+  `3.1.0`: [Changelog/3.1.0](https://github.com/UbiqueInnovation/uetlib-testcontainers/blob/main/CHANGELOG.md#310) [Diff/3.0.1-3.1.0](https://github.com/UbiqueInnovation/uetlib-testcontainers/compare/v3.0.1...v3.1.0)
+- `uetlib-webp` updated to
+  `1.1.0`: [Changelog/1.1.0](https://github.com/UbiqueInnovation/uetlib-webp/blob/main/CHANGELOG.md#110) [Diff/1.0.3-1.1.0](https://github.com/UbiqueInnovation/uetlib-webp/compare/v1.0.3...v1.1.0)
+- Updated dependencies and actions.
 
 - Fix the warnings of Error Prone's default checks: `ImageVariant` keys convert case with `Locale.ROOT`, signed URL
   expiry is computed in UTC, and the backoff header uses `Duration.toSeconds()`.

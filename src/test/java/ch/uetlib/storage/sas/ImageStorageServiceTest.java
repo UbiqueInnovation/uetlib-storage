@@ -23,6 +23,8 @@ import java.util.function.Function;
 
 import javax.imageio.ImageIO;
 
+// The streams are in-memory ByteArrayInputStreams; closing them is not needed.
+@SuppressWarnings("resource")
 class ImageStorageServiceTest {
 
     private static final Function<Integer, Function<ImageVariant, String>> GENERATE_GENERATE_PATH =
@@ -46,7 +48,7 @@ class ImageStorageServiceTest {
         final var exampleImage = imageOutput.toByteArray();
         final var exampleImageInputStream = new ByteArrayInputStream(exampleImage);
 
-        doReturn(new ByteArrayInputStream(exampleImage))
+        doAnswer(_ -> new ByteArrayInputStream(exampleImage))
                 .when(storageClient)
                 .read("sasImage/1-original.jpeg");
         final var blurHashRepresentation =
@@ -76,7 +78,7 @@ class ImageStorageServiceTest {
                         new InputStreamOutput(exampleImageInputStream, MediaType.JPEG.toString()),
                         "sasImage/1-original.jpeg");
 
-        doReturn(new ByteArrayInputStream(exampleImage))
+        doAnswer(_ -> new ByteArrayInputStream(exampleImage))
                 .when(storageClient)
                 .read("sasImage/1-original.jpeg");
         final var blurHashRepresentation =
@@ -96,15 +98,14 @@ class ImageStorageServiceTest {
         final var exampleImage = imageOutput.toByteArray();
         final var exampleImageInputStream = new ByteArrayInputStream(exampleImage);
 
-        doReturn(new ByteArrayInputStream(exampleImage))
+        doAnswer(_ -> new ByteArrayInputStream(exampleImage))
                 .when(storageClient)
                 .read("sasImage/1-original.png");
-        assertDoesNotThrow(
-                () ->
-                        imageStorageService.processImage(
-                                exampleImageInputStream,
-                                GENERATE_GENERATE_PATH_PNG.apply(1),
-                                MediaType.PNG));
+        assertDoesNotThrow(() ->
+                imageStorageService.processImage(
+                        exampleImageInputStream,
+                        GENERATE_GENERATE_PATH_PNG.apply(1),
+                        MediaType.PNG));
         verify(storageClient, atLeastOnce())
                 .write(
                         new InputStreamOutput(exampleImageInputStream, "image/png"),

@@ -42,12 +42,11 @@ public class StorageInvocationHandler implements InvocationHandler {
                         args == null ? null : args.length,
                         Optional.ofNullable(args).stream()
                                 .flatMap(Stream::of)
-                                .map(
-                                        o ->
-                                                Optional.ofNullable(o)
-                                                        .map(Object::getClass)
-                                                        .map(Class::getCanonicalName)
-                                                        .orElse("null"))
+                                .map(o ->
+                                        Optional.ofNullable(o)
+                                                .map(Object::getClass)
+                                                .map(Class::getCanonicalName)
+                                                .orElse("null"))
                                 .collect(Collectors.joining(", ")));
                 try {
                     yield Objects.requireNonNull(dispatch.get(method))

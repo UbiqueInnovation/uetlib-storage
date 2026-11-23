@@ -114,19 +114,17 @@ class CopyFailureTest {
         final var pending = new CompletableFuture<CopyObjectResponse>();
         final var started = new CountDownLatch(1);
         when(s3.copyObject(any(CopyObjectRequest.class)))
-                .thenAnswer(
-                        invocation -> {
-                            started.countDown();
-                            return pending;
-                        });
+                .thenAnswer(_ -> {
+                    started.countDown();
+                    return pending;
+                });
         final var client = new AmazonS3StorageClient("bucket", null, s3);
         try (final var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             final var task =
-                    executor.submit(
-                            () -> {
-                                client.copy("source", "destination");
-                                return true;
-                            });
+                    executor.submit(() -> {
+                        client.copy("source", "destination");
+                        return true;
+                    });
             assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
             assertThat(task.isDone()).isFalse();
             pending.complete(
